@@ -11,7 +11,9 @@ const POST_TYPE_CONFIG = {
 };
 
 function timeAgo(dateStr) {
+  if (!dateStr || dateStr === 'demo') return 'Demo post';
   const diff = Date.now() - new Date(dateStr).getTime();
+  if (Number.isNaN(diff)) return 'Demo post';
   const m = Math.floor(diff / 60000);
   if (m < 1) return 'just now';
   if (m < 60) return `${m}m ago`;
@@ -22,6 +24,7 @@ function timeAgo(dateStr) {
 
 export default function PostCard({ post, onVote, userVote = 0 }) {
   const typeConfig = POST_TYPE_CONFIG[post.type] || POST_TYPE_CONFIG.DISCUSSION;
+  const isDemo = Boolean(post.isDemo);
 
   return (
     <div className="post-card animate-fadeIn">
@@ -52,6 +55,11 @@ export default function PostCard({ post, onVote, userVote = 0 }) {
           {post.tags?.length > 3 && (
             <span className="post-card-more-tags">+{post.tags.length - 3}</span>
           )}
+          {isDemo && (
+            <span className="post-demo-badge" title="Sample demonstration post">
+              DEMO
+            </span>
+          )}
         </div>
 
         {/* Title */}
@@ -67,17 +75,25 @@ export default function PostCard({ post, onVote, userVote = 0 }) {
           <div className="post-card-author">
             <div className="post-author-avatar">{post.author?.username?.[0]?.toUpperCase() || '?'}</div>
             <span className="post-author-name">{post.author?.username || 'Anonymous'}</span>
-            <span className="post-author-level">LVL {post.author?.level || 1}</span>
+            {!isDemo && (
+              <span className="post-author-level">LVL {post.author?.level || 1}</span>
+            )}
           </div>
           <div className="post-card-stats">
-            <span className="post-stat">
+            <Link
+              to={`/community/${post.id}#comments`}
+              className="post-stat post-stat-link"
+              title="View comments"
+            >
               <MessageSquare size={13} /> {post.comment_count || 0}
-            </span>
+            </Link>
+            {!isDemo && (
+              <span className="post-stat">
+                <Eye size={13} /> {post.views || 0}
+              </span>
+            )}
             <span className="post-stat">
-              <Eye size={13} /> {post.views || 0}
-            </span>
-            <span className="post-stat">
-              <Clock size={13} /> {timeAgo(post.created_at)}
+              <Clock size={13} /> {isDemo ? 'Demo post' : timeAgo(post.created_at)}
             </span>
           </div>
         </div>

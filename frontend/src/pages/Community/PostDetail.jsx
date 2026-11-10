@@ -1,11 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { ArrowLeft, Edit, Trash2, Eye, Clock, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Eye, Clock, ChevronUp, Info } from 'lucide-react';
 import VoteButton from '../../components/Community/VoteButton';
 import TagBadge from '../../components/Community/TagBadge';
 import CodeSnippet from '../../components/Community/CodeSnippet';
 import CommentThread from '../../components/Community/CommentThread';
+import {
+  isDemoPostId,
+  getDemoPostById,
+  getDemoCommentsForPost,
+  getDemoUserVote,
+  applyDemoVote,
+  addDemoSessionComment,
+} from '../../data/communityDemoData';
 import './PostDetail.css';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -17,7 +25,9 @@ const POST_TYPE_CONFIG = {
 };
 
 function timeAgo(dateStr) {
+  if (!dateStr || dateStr === 'demo') return 'Demo post';
   const diff = Date.now() - new Date(dateStr).getTime();
+  if (Number.isNaN(diff)) return 'Demo post';
   const m = Math.floor(diff / 60000);
   if (m < 1) return 'just now';
   if (m < 60) return `${m}m ago`;
@@ -39,7 +49,19 @@ export default function PostDetail() {
   const [userVote, setUserVote] = useState(0);
   const [deleting, setDeleting] = useState(false);
 
+  const currentUserId = user?.id;
+
   useEffect(() => {
+    if (isDemoPostId(postId)) {
+      const demoPost = getDemoPostById(postId);
+      setPost(demoPost);
+      setComments(getDemoCommentsForPost(postId, commentSort));
+      setUserVote(getDemoUserVote(postId));
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     const fetchPost = async () => {
       setLoading(true);
       try {
@@ -53,7 +75,7 @@ export default function PostDetail() {
         setComments(Array.isArray(commentsData) ? commentsData : []);
 
         // Fetch user's vote if logged in
-        if (user) {
+        if (currentUserId && user?.getToken) {
           const token = await user.getToken();
           const voteRes = await fetch(`${API}/api/community/posts/${postId}/user-vote`, {
             headers: { Authorization: `Bearer ${token}` },
@@ -70,9 +92,18 @@ export default function PostDetail() {
       }
     };
     fetchPost();
-  }, [postId, commentSort, user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [postId, commentSort, currentUserId]);
 
   const handleVote = async (value) => {
+    if (post?.isDemo || isDemoPostId(postId)) {
+      const updated = applyDemoVote(postId, value);
+      if (!updated) return;
+      setPost((prev) => (prev ? { ...prev, vote_score: updated.vote_score } : prev));
+      setUserVote(updated.user_vote);
+      return;
+    }
+
     if (!user) return navigate('/login');
     const token = await user.getToken();
     const res = await fetch(`${API}/api/community/posts/${postId}/vote`, {
@@ -88,6 +119,7 @@ export default function PostDetail() {
   };
 
   const handleDelete = async () => {
+    if (post?.isDemo || isDemoPostId(postId)) return;
     if (!user || !confirm('Are you sure you want to delete this post?')) return;
     setDeleting(true);
     const token = await user.getToken();
@@ -124,7 +156,8 @@ export default function PostDetail() {
   }
 
   const typeConfig = POST_TYPE_CONFIG[post.type] || POST_TYPE_CONFIG.DISCUSSION;
-  const isOwner = user?.id === post.clerk_id;
+  const isDemo = Boolean(post.isDemo);
+  const isOwner = !isDemo && user?.id === post.clerk_id;
 
   return (
     <div className="pd-page page animate-fadeIn">
@@ -139,7 +172,18 @@ export default function PostDetail() {
           <span className="pd-breadcrumb-type" style={{ color: typeConfig.color }}>
             {typeConfig.text}
           </span>
+          {isDemo && <span className="post-demo-badge" style={{ marginLeft: '8px' }}>DEMO</span>}
         </div>
+
+        {isDemo && (
+          <div className="community-demo-notice" role="status" style={{ marginBottom: '20px' }}>
+            <div className="community-demo-notice-text">
+              <Info size={16} />
+              <span>You&apos;re viewing sample community posts. Session likes and replies are not saved permanently.</span>
+            </div>
+            <span className="community-demo-pill">DEMO DATA</span>
+          </div>
+        )}
 
         <div className="pd-layout">
           {/* Main post */}
@@ -173,6 +217,7 @@ export default function PostDetail() {
                           <TagBadge tag={tag} small />
                         </Link>
                       ))}
+                      {isDemo && <span className="post-demo-badge">DEMO</span>}
                     </div>
 
                     {isOwner && (
@@ -203,12 +248,18 @@ export default function PostDetail() {
                     <div className="pd-author-avatar">{post.author?.username?.[0]?.toUpperCase() || '?'}</div>
                     <div className="pd-author-info">
                       <span className="pd-author-name">{post.author?.username || 'Anonymous'}</span>
-                      <span className="pd-author-level">LVL {post.author?.level || 1}</span>
+                      {!isDemo && (
+                        <span className="pd-author-level">LVL {post.author?.level || 1}</span>
+                      )}
                       {post.author?.title && <span className="pd-author-title">{post.author.title}</span>}
                     </div>
                     <div className="pd-post-meta">
-                      <span className="post-stat"><Clock size={13} /> {timeAgo(post.created_at)}</span>
-                      <span className="post-stat"><Eye size={13} /> {post.views || 0} views</span>
+                      <span className="post-stat">
+                        <Clock size={13} /> {isDemo ? 'Demo post' : timeAgo(post.created_at)}
+                      </span>
+                      {!isDemo && (
+                        <span className="post-stat"><Eye size={13} /> {post.views || 0} views</span>
+                      )}
                     </div>
                   </div>
 
@@ -228,7 +279,7 @@ export default function PostDetail() {
                   )}
 
                   {/* Post updated indicator */}
-                  {post.updated_at !== post.created_at && (
+                  {!isDemo && post.updated_at !== post.created_at && (
                     <div className="pd-edited-note">
                       Edited {timeAgo(post.updated_at)}
                     </div>
@@ -238,13 +289,17 @@ export default function PostDetail() {
             </article>
 
             {/* Comments */}
-            <div className="pd-comments-section">
+            <div className="pd-comments-section" id="comments">
               <CommentThread
                 postId={postId}
                 comments={comments}
                 sort={commentSort}
+                isDemo={isDemo}
                 onSortChange={(s) => setCommentSort(s)}
-                onCommentAdded={(c) => setComments((prev) => [c, ...prev])}
+                onCommentAdded={(c) => {
+                  if (isDemo && !c.parent_id) addDemoSessionComment(postId, c);
+                  setComments((prev) => [c, ...prev]);
+                }}
                 onCommentDeleted={(id) => setComments((prev) => prev.filter((c) => c.id !== id))}
               />
             </div>
@@ -261,16 +316,18 @@ export default function PostDetail() {
                 </span>
               </div>
               <div className="pd-sidebar-row">
-                <span className="pd-sidebar-label">Score</span>
+                <span className="pd-sidebar-label">{isDemo ? 'Likes' : 'Score'}</span>
                 <span className="pd-sidebar-val">{post.vote_score}</span>
               </div>
-              <div className="pd-sidebar-row">
-                <span className="pd-sidebar-label">Views</span>
-                <span className="pd-sidebar-val">{post.views}</span>
-              </div>
+              {!isDemo && (
+                <div className="pd-sidebar-row">
+                  <span className="pd-sidebar-label">Views</span>
+                  <span className="pd-sidebar-val">{post.views}</span>
+                </div>
+              )}
               <div className="pd-sidebar-row">
                 <span className="pd-sidebar-label">Posted</span>
-                <span className="pd-sidebar-val">{timeAgo(post.created_at)}</span>
+                <span className="pd-sidebar-val">{isDemo ? 'Demo post' : timeAgo(post.created_at)}</span>
               </div>
               {post.tags?.length > 0 && (
                 <div className="pd-sidebar-tags">

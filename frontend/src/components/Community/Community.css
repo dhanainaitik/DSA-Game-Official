@@ -757,3 +757,64 @@
   font-family: 'Space Grotesk', sans-serif;
   letter-spacing: 0.05em;
 }
+
+/* ── DEMO MODE BADGES & LINKS ── */
+.post-demo-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  background: #FFF8D6;
+  color: #525252;
+  border: 1.5px solid #000;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 2px;
+  margin-left: auto;
+}
+
+.pd-type-tags .post-demo-badge,
+.comment-author-row .post-demo-badge {
+  margin-left: 0;
+}
+
+.post-stat-link {
+  text-decoration: none;
+  color: var(--text-muted);
+  transition: color 0.12s ease;
+}
+
+.post-stat-link:hover {
+  color: #000;
+  text-decoration: underline;
+}
+
+.sidebar-demo-tag {
+  margin-left: auto;
+  font-size: 0.62rem;
+  font-weight: 800;
+  padding: 1px 6px;
+  background: #FFF8D6;
+  color: #525252;
+  border: 1px solid #000;
+  border-radius: 2px;
+  letter-spacing: 0.06em;
+}
+
+[data-theme="dark"] .post-demo-badge,
+[data-theme="dark"] .sidebar-demo-tag {
+  background: #242424;
+  color: #FFD600;
+  border-color: #FFD600;
+}
+
+[data-theme="dark"] .post-stat-link:hover {
+  color: #FFD600;
+}
+
+/* Stack nested replies cleanly under parent comments */
+.comment-node {
+  flex-direction: column;
+}

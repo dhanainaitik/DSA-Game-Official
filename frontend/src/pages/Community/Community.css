@@ -166,3 +166,44 @@
   font-weight: 700;
   text-align: center;
 }
+
+/* Subtle demo-data notice */
+.community-demo-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  background: #FFFDF5;
+  border: 2px solid #000;
+  box-shadow: 3px 3px 0 #FFD600;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #262626;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.community-demo-notice-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.community-demo-pill {
+  padding: 2px 8px;
+  background: #FFD600;
+  color: #000;
+  border: 1.5px solid #000;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+[data-theme="dark"] .community-demo-notice {
+  background: #1A1A1A;
+  border-color: #FFD600;
+  color: #F5F5F5;
+}

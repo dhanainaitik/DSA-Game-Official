@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { MessageSquare, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import VoteButton from './VoteButton';
@@ -6,8 +6,11 @@ import './Community.css';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-function timeAgo(dateStr) {
+function timeAgo(dateStr, isSession = false) {
+  if (isSession) return 'Session comment (not saved)';
+  if (!dateStr || dateStr === 'demo') return 'Demo comment';
   const diff = Date.now() - new Date(dateStr).getTime();
+  if (Number.isNaN(diff)) return 'Demo comment';
   const m = Math.floor(diff / 60000);
   if (m < 1) return 'just now';
   if (m < 60) return `${m}m ago`;
@@ -16,13 +19,14 @@ function timeAgo(dateStr) {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-function CommentNode({ comment, depth = 0, onReply, onVote, onDelete, currentUserId }) {
+function CommentNode({ comment, depth = 0, onReply, onVote, onDelete, currentUserId, isDemoPost }) {
   const [collapsed, setCollapsed] = useState(false);
   const [replying, setReplying] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const hasChildren = comment.children && comment.children.length > 0;
+  const isDemoComment = Boolean(comment.isDemo || isDemoPost);
 
   const handleReplySubmit = async () => {
     if (!replyText.trim() || submitting) return;
@@ -41,9 +45,17 @@ function CommentNode({ comment, depth = 0, onReply, onVote, onDelete, currentUse
         <div className="comment-author-row">
           <div className="comment-avatar">{comment.author?.username?.[0]?.toUpperCase() || '?'}</div>
           <span className="comment-username">{comment.author?.username || 'Unknown'}</span>
-          <span className="comment-lvl">LVL {comment.author?.level || 1}</span>
-          <span className="comment-time">{timeAgo(comment.created_at)}</span>
-          {currentUserId === comment.clerk_id && (
+          {!isDemoComment && (
+            <span className="comment-lvl">LVL {comment.author?.level || 1}</span>
+          )}
+          {comment.isSession && (
+            <span className="post-demo-badge">SESSION</span>
+          )}
+          {comment.isDemo && !comment.isSession && (
+            <span className="post-demo-badge">DEMO</span>
+          )}
+          <span className="comment-time">{timeAgo(comment.created_at, comment.isSession)}</span>
+          {currentUserId === comment.clerk_id && !comment.isDemo && (
             <button className="comment-delete-btn" onClick={() => onDelete(comment.id)} title="Delete">
               <Trash2 size={12} />
             </button>
@@ -112,6 +124,7 @@ function CommentNode({ comment, depth = 0, onReply, onVote, onDelete, currentUse
               onVote={onVote}
               onDelete={onDelete}
               currentUserId={currentUserId}
+              isDemoPost={isDemoPost}
             />
           ))}
         </div>
@@ -135,19 +148,50 @@ function buildTree(comments) {
   return roots;
 }
 
-export default function CommentThread({ postId, comments, onCommentAdded, onCommentDeleted, sort, onSortChange }) {
+export default function CommentThread({
+  postId,
+  comments,
+  onCommentAdded,
+  onCommentDeleted,
+  sort,
+  onSortChange,
+  isDemo = false,
+}) {
   const { user } = useAuth();
   const [newComment, setNewComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [localComments, setLocalComments] = useState(comments);
 
-  // Sync with parent
-  useState(() => { setLocalComments(comments); }, [comments]);
+  // Sync with parent when comments or sort order update
+  useEffect(() => {
+    setLocalComments(comments);
+  }, [comments]);
 
   const getToken = async () => user?.getToken();
 
   const handleTopLevelSubmit = async () => {
-    if (!newComment.trim() || submitting || !user) return;
+    if (!newComment.trim() || submitting) return;
+
+    if (isDemo) {
+      const localItem = {
+        id: `session-c-${Date.now()}`,
+        post_id: postId,
+        parent_id: null,
+        isDemo: false,
+        isSession: true,
+        clerk_id: user?.id || 'session-user',
+        content: newComment.trim(),
+        vote_score: 0,
+        created_at: new Date().toISOString(),
+        author: { username: user?.username || 'You', level: 1 },
+      };
+      setLocalComments((prev) => [localItem, ...prev]);
+      setNewComment('');
+      onCommentAdded?.(localItem);
+      return;
+    }
+
+    if (!user) return;
     setSubmitting(true);
     try {
       const token = await getToken();
@@ -168,6 +212,24 @@ export default function CommentThread({ postId, comments, onCommentAdded, onComm
   };
 
   const handleReply = async (content, parentId) => {
+    if (isDemo) {
+      const localReply = {
+        id: `session-r-${Date.now()}`,
+        post_id: postId,
+        parent_id: parentId,
+        isDemo: false,
+        isSession: true,
+        clerk_id: user?.id || 'session-user',
+        content,
+        vote_score: 0,
+        created_at: new Date().toISOString(),
+        author: { username: user?.username || 'You', level: 1 },
+      };
+      setLocalComments((prev) => [...prev, localReply]);
+      onCommentAdded?.(localReply);
+      return;
+    }
+
     if (!user) return;
     const token = await getToken();
     const res = await fetch(`${API}/api/community/posts/${postId}/comments`, {
@@ -183,6 +245,19 @@ export default function CommentThread({ postId, comments, onCommentAdded, onComm
   };
 
   const handleVote = async (commentId, value) => {
+    if (isDemo) {
+      setLocalComments((prev) =>
+        prev.map((c) => {
+          if (c.id !== commentId) return c;
+          const prevVote = c.userVote || 0;
+          const nextVote = prevVote === value ? 0 : value;
+          const delta = nextVote - prevVote;
+          return { ...c, vote_score: (c.vote_score || 0) + delta, userVote: nextVote };
+        })
+      );
+      return;
+    }
+
     if (!user) return;
     const token = await getToken();
     const res = await fetch(`${API}/api/community/comments/${commentId}/vote`, {
@@ -197,6 +272,12 @@ export default function CommentThread({ postId, comments, onCommentAdded, onComm
   };
 
   const handleDelete = async (commentId) => {
+    if (isDemo) {
+      setLocalComments((prev) => prev.filter((c) => c.id !== commentId));
+      onCommentDeleted?.(commentId);
+      return;
+    }
+
     if (!user || !confirm('Delete this comment?')) return;
     const token = await getToken();
     const res = await fetch(`${API}/api/community/comments/${commentId}`, {
@@ -224,15 +305,19 @@ export default function CommentThread({ postId, comments, onCommentAdded, onComm
       </div>
 
       {/* New comment box */}
-      {user ? (
+      {user || isDemo ? (
         <div className="comment-new-wrap">
-          <div className="comment-new-avatar">{user.username?.[0]?.toUpperCase()}</div>
+          <div className="comment-new-avatar">{user?.username?.[0]?.toUpperCase() || 'Y'}</div>
           <div className="comment-new-form">
             <textarea
               className="input"
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
-              placeholder="Share your thoughts, ask a question, or leave feedback..."
+              placeholder={
+                isDemo
+                  ? 'Try adding a sample comment for this browser session...'
+                  : 'Share your thoughts, ask a question, or leave feedback...'
+              }
               rows={3}
             />
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
@@ -266,7 +351,8 @@ export default function CommentThread({ postId, comments, onCommentAdded, onComm
               onReply={handleReply}
               onVote={handleVote}
               onDelete={handleDelete}
-              currentUserId={user?.id}
+              currentUserId={user?.id || 'session-user'}
+              isDemoPost={isDemo}
             />
           ))
         )}

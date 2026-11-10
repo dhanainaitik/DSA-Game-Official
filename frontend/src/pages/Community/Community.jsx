@@ -1,10 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { PenSquare, RefreshCw, Zap, Clock } from 'lucide-react';
+import { PenSquare, RefreshCw, Zap, Clock, Info } from 'lucide-react';
 import PageHeader from '../../components/UI/PageHeader';
 import PostCard from '../../components/Community/PostCard';
 import CommunitySidebar from '../../components/Community/CommunitySidebar';
+import {
+  getDemoPostsWithSession,
+  getDemoUserVote,
+  applyDemoVote,
+  isDemoPostId,
+} from '../../data/communityDemoData';
 import './Community.css';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -15,20 +21,33 @@ const POST_TYPES = ['All', 'Question', 'Discussion', 'Solution'];
 export default function Community() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [sort, setSort] = useState('new');
-  const [activeTag, setActiveTag] = useState(null);
+  const [activeTag, setActiveTag] = useState(() => searchParams.get('tag'));
   const [activeType, setActiveType] = useState('All');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [userVotes, setUserVotes] = useState({});
 
+  const [demoMode, setDemoMode] = useState(false);
+  const [demoPosts, setDemoPosts] = useState(() => getDemoPostsWithSession());
+  const [demoVotes, setDemoVotes] = useState(() => {
+    const initial = {};
+    for (const p of getDemoPostsWithSession()) {
+      const v = getDemoUserVote(p.id);
+      if (v) initial[p.id] = v;
+    }
+    return initial;
+  });
+
+  // Track whether unfiltered live API had real posts so filtering down on live data won't overwrite real community state
+  const hasLiveDataRef = useRef(false);
+
   const fetchPosts = useCallback(async (reset = false) => {
     setLoading(true);
-    setError(null);
     const currentPage = reset ? 1 : page;
     try {
       const params = new URLSearchParams({
@@ -41,17 +60,35 @@ export default function Community() {
 
       const res = await fetch(`${API}/api/community/posts?${params}`);
       if (!res.ok) throw new Error('Failed to fetch posts');
-      const { posts: newPosts, total: totalCount } = await res.json();
+      const data = await res.json();
+      const newPosts = Array.isArray(data?.posts) ? data.posts : [];
+      const totalCount = typeof data?.total === 'number' ? data.total : newPosts.length;
 
-      if (reset) {
-        setPosts(newPosts);
-        setPage(1);
+      const isUnfilteredEmpty = !activeTag && activeType === 'All' && newPosts.length === 0;
+      const shouldFallbackEmpty =
+        newPosts.length === 0 && (isUnfilteredEmpty || !hasLiveDataRef.current);
+
+      if (shouldFallbackEmpty) {
+        hasLiveDataRef.current = false;
+        setDemoMode(true);
+        setPosts([]);
+        setTotal(0);
       } else {
-        setPosts((prev) => (currentPage === 1 ? newPosts : [...prev, ...newPosts]));
+        hasLiveDataRef.current = true;
+        setDemoMode(false);
+        if (reset) {
+          setPosts(newPosts);
+          setPage(1);
+        } else {
+          setPosts((prev) => (currentPage === 1 ? newPosts : [...prev, ...newPosts]));
+        }
+        setTotal(totalCount);
       }
-      setTotal(totalCount);
-    } catch (err) {
-      setError(err.message);
+    } catch {
+      hasLiveDataRef.current = false;
+      setDemoMode(true);
+      setPosts([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
@@ -62,6 +99,14 @@ export default function Community() {
   }, [sort, activeTag, activeType]);
 
   const handleVote = async (postId, value) => {
+    if (demoMode || isDemoPostId(postId)) {
+      const updated = applyDemoVote(postId, value);
+      if (!updated) return;
+      setDemoPosts(getDemoPostsWithSession());
+      setDemoVotes((prev) => ({ ...prev, [postId]: updated.user_vote }));
+      return;
+    }
+
     if (!user) return navigate('/login');
     const token = await user.getToken();
     const res = await fetch(`${API}/api/community/posts/${postId}/vote`, {
@@ -72,7 +117,7 @@ export default function Community() {
     if (res.ok) {
       const { vote_score, user_vote } = await res.json();
       setPosts((prev) =>
-        prev.map((p) => p.id === postId ? { ...p, vote_score } : p)
+        prev.map((p) => (p.id === postId ? { ...p, vote_score } : p))
       );
       setUserVotes((prev) => ({ ...prev, [postId]: user_vote }));
     }
@@ -89,7 +134,27 @@ export default function Community() {
     fetchPosts(false);
   };
 
-  const hasMore = posts.length < total;
+  const filteredDemoPosts = useMemo(() => {
+    if (!demoMode) return [];
+    let list = [...demoPosts];
+    if (activeType !== 'All') {
+      const targetType = activeType.toUpperCase();
+      list = list.filter((p) => p.type === targetType);
+    }
+    if (activeTag) {
+      const targetTag = activeTag.toLowerCase();
+      list = list.filter((p) =>
+        p.tags?.some((t) => t.toLowerCase() === targetTag)
+      );
+    }
+    if (sort === 'top') {
+      list.sort((a, b) => (b.vote_score || 0) - (a.vote_score || 0));
+    }
+    return list;
+  }, [demoMode, demoPosts, activeType, activeTag, sort]);
+
+  const displayedPosts = demoMode ? filteredDemoPosts : posts;
+  const hasMore = !demoMode && posts.length < total;
 
   return (
     <div className="community-page page animate-fadeIn">
@@ -150,6 +215,17 @@ export default function Community() {
           </div>
         </div>
 
+        {/* Subtle Demo Mode Notice */}
+        {demoMode && (
+          <div className="community-demo-notice" role="status">
+            <div className="community-demo-notice-text">
+              <Info size={16} />
+              <span>You&apos;re viewing sample community posts.</span>
+            </div>
+            <span className="community-demo-pill">DEMO DATA</span>
+          </div>
+        )}
+
         {/* Active tag banner */}
         {activeTag && (
           <div className="community-tag-banner">
@@ -162,38 +238,33 @@ export default function Community() {
         <div className="community-layout">
           {/* Feed */}
           <div className="community-feed">
-            {loading && posts.length === 0 ? (
+            {loading && !demoMode && posts.length === 0 ? (
               <div className="community-loading">
                 {[1, 2, 3].map((i) => (
                   <div key={i} className="post-card-skeleton" />
                 ))}
               </div>
-            ) : error ? (
-              <div className="community-error">
-                <span>⚠️ {error}</span>
-                <button className="btn btn-sm" onClick={() => fetchPosts(true)}>Retry</button>
-              </div>
-            ) : posts.length === 0 ? (
+            ) : displayedPosts.length === 0 ? (
               <div className="empty-state">
                 <PenSquare size={40} opacity={0.2} />
-                <strong>No posts yet</strong>
+                <strong>No posts found</strong>
                 <span style={{ fontSize: '0.9rem' }}>
-                  {activeTag ? `No posts tagged "${activeTag}"` : 'Be the first to post!'}
+                  {activeTag ? `No posts tagged "${activeTag}"` : 'Try clearing filters or create a post!'}
                 </span>
                 {user && (
                   <button className="btn btn-primary" onClick={() => navigate('/community/new')}>
-                    + Create First Post
+                    + Create Post
                   </button>
                 )}
               </div>
             ) : (
               <div className="post-list stagger-children">
-                {posts.map((post) => (
+                {displayedPosts.map((post) => (
                   <PostCard
                     key={post.id}
                     post={post}
                     onVote={handleVote}
-                    userVote={userVotes[post.id] || 0}
+                    userVote={demoMode ? (demoVotes[post.id] || 0) : (userVotes[post.id] || 0)}
                   />
                 ))}
               </div>
@@ -208,7 +279,7 @@ export default function Community() {
               </div>
             )}
 
-            {loading && posts.length > 0 && (
+            {loading && !demoMode && posts.length > 0 && (
               <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)', fontWeight: 700, fontFamily: 'Space Grotesk' }}>
                 Loading...
               </div>
@@ -220,6 +291,8 @@ export default function Community() {
             activeTag={activeTag}
             onTagSelect={handleTagSelect}
             onCreatePost={() => navigate('/community/new')}
+            demoMode={demoMode}
+            demoPosts={demoPosts}
           />
         </div>
       </div>

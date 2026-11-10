@@ -402,13 +402,11 @@
   border: 3px solid #000;
 }
 
-@media (max-width: 900px) {
-  .flow-grid { grid-template-columns: repeat(2, 1fr); }
-  .flow-card:nth-child(5) { grid-column: span 2; }
-}
-
 .flow-card {
-  padding: 40px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 36px 26px;
   border-right: 3px solid #000;
   position: relative;
   transition: background 0.15s;
@@ -422,8 +420,8 @@
   font-weight: 900;
   color: #000;
   opacity: 0.08;
-  line-height: 1;
-  margin-bottom: -12px;
+  line-height: 0.9;
+  margin: 0 0 22px 0;
 }
 
 .flow-icon-box {
@@ -434,7 +432,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 20px;
+  margin: 0 0 22px 0;
   flex-shrink: 0;
   border: 2px solid #000;
 }
@@ -444,18 +442,69 @@
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: -0.02em;
-  margin-bottom: 8px;
+  line-height: 1.15;
+  margin: 0 0 10px 0;
 }
 
 .flow-card-desc {
-  font-size: 0.8rem;
+  font-size: 0.84rem;
   color: #555;
   font-weight: 600;
-  line-height: 1.5;
+  line-height: 1.55;
+  margin: 0;
 }
 
 .flow-connector {
   display: none;
+}
+
+@media (max-width: 1080px) {
+  .flow-card {
+    padding: 32px 20px;
+  }
+}
+
+@media (max-width: 900px) {
+  .flow-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .flow-card {
+    padding: 32px 24px;
+    border-right: 3px solid #000;
+    border-bottom: 3px solid #000;
+  }
+
+  .flow-card:nth-child(2n),
+  .flow-card:last-child {
+    border-right: none;
+  }
+
+  .flow-card:nth-child(5) {
+    grid-column: span 2;
+    border-right: none;
+    border-bottom: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .flow-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .flow-card {
+    padding: 28px 22px;
+    border-right: none;
+    border-bottom: 3px solid #000;
+  }
+
+  .flow-card:nth-child(5) {
+    grid-column: span 1;
+  }
+
+  .flow-card:last-child {
+    border-bottom: none;
+  }
 }
 
 /* ─── BENTO GRID ─────────────────────────────────────────────────────────── */

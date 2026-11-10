@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { TrendingUp, Tag, PenSquare, Flame, Hash } from 'lucide-react';
 import TagBadge from './TagBadge';
@@ -14,7 +14,9 @@ const ALL_TAGS = [
 ];
 
 function timeAgo(dateStr) {
+  if (!dateStr || dateStr === 'demo') return 'Demo post';
   const diff = Date.now() - new Date(dateStr).getTime();
+  if (Number.isNaN(diff)) return 'Demo post';
   const m = Math.floor(diff / 60000);
   if (m < 1) return 'just now';
   if (m < 60) return `${m}m ago`;
@@ -23,15 +25,34 @@ function timeAgo(dateStr) {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-export default function CommunitySidebar({ activeTag, onTagSelect, onCreatePost }) {
-  const [trending, setTrending] = useState([]);
+export default function CommunitySidebar({
+  activeTag,
+  onTagSelect,
+  onCreatePost,
+  demoMode = false,
+  demoPosts = [],
+}) {
+  const [liveTrending, setLiveTrending] = useState([]);
 
   useEffect(() => {
+    let cancelled = false;
     fetch(`${API}/api/community/trending`)
-      .then((r) => r.json())
-      .then((data) => Array.isArray(data) && setTrending(data))
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => {
+        if (!cancelled && Array.isArray(data)) {
+          setLiveTrending(data);
+        }
+      })
       .catch(() => {});
+    return () => { cancelled = true; };
   }, []);
+
+  const displayedTrending = useMemo(() => {
+    if (demoMode) {
+      return [...demoPosts].sort((a, b) => (b.vote_score || 0) - (a.vote_score || 0));
+    }
+    return liveTrending;
+  }, [demoMode, demoPosts, liveTrending]);
 
   return (
     <aside className="community-sidebar">
@@ -50,19 +71,26 @@ export default function CommunitySidebar({ activeTag, onTagSelect, onCreatePost 
       {/* Trending Posts */}
       <div className="sidebar-section">
         <div className="sidebar-section-title">
-          <Flame size={16} /> Trending This Week
+          <Flame size={16} />
+          <span>Trending This Week</span>
+          {demoMode && <span className="sidebar-demo-tag">DEMO</span>}
         </div>
-        {trending.length === 0 ? (
-          <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', padding: '8px 0' }}>No trending posts yet.</div>
+        {displayedTrending.length === 0 ? (
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', padding: '8px 0' }}>
+            No trending posts yet.
+          </div>
         ) : (
           <div className="sidebar-trending-list">
-            {trending.map((post, i) => (
+            {displayedTrending.map((post, i) => (
               <Link to={`/community/${post.id}`} key={post.id} className="sidebar-trending-item">
                 <span className="sidebar-trending-rank">{i + 1}</span>
                 <div className="sidebar-trending-content">
                   <span className="sidebar-trending-title">{post.title}</span>
                   <div className="sidebar-trending-meta">
-                    <TrendingUp size={11} /> {post.vote_score} votes · {timeAgo(post.created_at)}
+                    <TrendingUp size={11} />{' '}
+                    {post.isDemo || demoMode
+                      ? `${post.vote_score} likes · Demo post`
+                      : `${post.vote_score} votes · ${timeAgo(post.created_at)}`}
                   </div>
                 </div>
               </Link>
@@ -90,8 +118,8 @@ export default function CommunitySidebar({ activeTag, onTagSelect, onCreatePost 
               key={tag}
               tag={tag}
               small
-              active={activeTag === tag}
-              onClick={() => onTagSelect(activeTag === tag ? null : tag)}
+              active={activeTag?.toLowerCase() === tag.toLowerCase()}
+              onClick={() => onTagSelect(activeTag?.toLowerCase() === tag.toLowerCase() ? null : tag)}
             />
           ))}
         </div>
