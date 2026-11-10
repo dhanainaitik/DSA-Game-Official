@@ -1,0 +1,317 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   LIVE TACTICAL RADAR — Code2Living Competitive Zone
+   Concentric Radial Scope · Perimeter Ticks · Rotating Sweep · Glowing Blips
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.tactical-radar-shell {
+  --radar-accent: #00F0A0;
+  --radar-accent-soft: rgba(0, 240, 160, 0.3);
+  --radar-accent-faint: rgba(0, 240, 160, 0.08);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px;
+  background: #080B09;
+  border: 1px solid #303030;
+  font-family: 'JetBrains Mono', monospace;
+  position: relative;
+}
+
+.tactical-radar-shell.radar-tone-yellow {
+  --radar-accent: #FFE500;
+  --radar-accent-soft: rgba(255, 229, 0, 0.28);
+  --radar-accent-faint: rgba(255, 229, 0, 0.08);
+}
+
+.tactical-radar-shell.radar-tone-orange {
+  --radar-accent: #FF6B00;
+  --radar-accent-soft: rgba(255, 107, 0, 0.28);
+  --radar-accent-faint: rgba(255, 107, 0, 0.08);
+}
+
+.tactical-radar-shell.variant-searching {
+  border-color: var(--radar-accent);
+  background: #060907;
+}
+
+/* ─── Header & Footer Bars ───────────────────────────────────────────────── */
+.tr-topbar,
+.tr-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #777777;
+}
+
+.tr-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--radar-accent);
+}
+
+.tr-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--radar-accent);
+  box-shadow: 0 0 8px var(--radar-accent);
+  animation: tr-dot-blink 1.6s ease-in-out infinite;
+}
+
+@keyframes tr-dot-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.tr-freq,
+.tr-footer-coords {
+  color: #777777;
+}
+
+.tr-footer {
+  border-top: 1px solid #242424;
+  padding-top: 8px;
+}
+
+.tr-footer-metric strong {
+  color: #F5F5F5;
+}
+
+/* ─── Circular Radar Scope ───────────────────────────────────────────────── */
+.tr-scope-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 0;
+}
+
+.tr-scope {
+  position: relative;
+  width: 224px;
+  height: 224px;
+  border-radius: 50%;
+  background: radial-gradient(circle at center, var(--radar-accent-faint) 0%, #040805 68%, #020302 100%);
+  border: 1px solid rgba(0, 240, 160, 0.25);
+  box-shadow: inset 0 0 28px rgba(0, 240, 160, 0.08);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.variant-searching .tr-scope {
+  width: 240px;
+  height: 240px;
+}
+
+.tr-grid-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  color: var(--radar-accent);
+  pointer-events: none;
+}
+
+/* Rotating Sweep Beam */
+.tr-sweep-rotator {
+  position: absolute;
+  inset: 6%;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: tr-sweep-spin 3.8s linear infinite;
+}
+
+.variant-searching .tr-sweep-rotator {
+  animation-duration: 2.2s;
+}
+
+@keyframes tr-sweep-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.tr-sweep-cone {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    rgba(0, 240, 160, 0.34) 0deg,
+    rgba(0, 240, 160, 0.12) 28deg,
+    rgba(0, 240, 160, 0.02) 64deg,
+    transparent 85deg,
+    transparent 360deg
+  );
+}
+
+.radar-tone-yellow .tr-sweep-cone {
+  background: conic-gradient(
+    from 0deg,
+    rgba(255, 229, 0, 0.3) 0deg,
+    rgba(255, 229, 0, 0.09) 34deg,
+    transparent 82deg,
+    transparent 360deg
+  );
+}
+
+.radar-tone-orange .tr-sweep-cone {
+  background: conic-gradient(
+    from 0deg,
+    rgba(255, 107, 0, 0.32) 0deg,
+    rgba(255, 107, 0, 0.1) 34deg,
+    transparent 82deg,
+    transparent 360deg
+  );
+}
+
+.tr-sweep-beam {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 1.5px;
+  height: 50%;
+  background: var(--radar-accent);
+  box-shadow: 0 0 10px 1px var(--radar-accent);
+  transform-origin: bottom center;
+}
+
+.tr-vector-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.tr-center-hub {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: #F5F5F5;
+  box-shadow: 0 0 8px var(--radar-accent);
+  z-index: 5;
+}
+
+/* ─── Opponent Detection Signals & Glowing Blips ─────────────────────────── */
+.tr-blip {
+  --blip-color: #00F0A0;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tr-blip.tone-yellow { --blip-color: #FFE500; }
+.tr-blip.tone-orange { --blip-color: #FF6B00; }
+.tr-blip.tone-muted  { --blip-color: #555555; }
+
+.tr-blip-core {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #F5F5F5;
+  border: 1.5px solid var(--blip-color);
+  box-shadow: 0 0 10px 3px var(--blip-color);
+  position: relative;
+  z-index: 2;
+}
+
+.tr-blip.tone-muted .tr-blip-core {
+  background: #444444;
+  box-shadow: none;
+  opacity: 0.55;
+}
+
+.tr-blip-pulse {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--blip-color);
+  opacity: 0;
+  animation: tr-blip-ping 2.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+  animation-delay: var(--blip-delay, 0s);
+}
+
+.tr-blip.tone-muted .tr-blip-pulse {
+  display: none;
+}
+
+@keyframes tr-blip-ping {
+  0%   { transform: scale(0.35); opacity: 0.9; }
+  75%  { transform: scale(1.3); opacity: 0; }
+  100% { transform: scale(1.3); opacity: 0; }
+}
+
+.tr-blip-bracket {
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  border: 1px solid var(--blip-color);
+  opacity: 0.85;
+  animation: tr-lock-spin 6s linear infinite;
+}
+
+@keyframes tr-lock-spin {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(90deg); }
+}
+
+.tr-blip-tag {
+  position: absolute;
+  top: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: 1px 4px;
+  background: rgba(8, 8, 8, 0.9);
+  border: 1px solid #303030;
+  color: #F5F5F5;
+  font-size: 0.44rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  pointer-events: none;
+}
+
+.tr-blip.is-locked .tr-blip-tag {
+  border-color: var(--blip-color);
+  color: var(--blip-color);
+}
+
+@media (max-width: 560px) {
+  .tr-scope {
+    width: 188px;
+    height: 188px;
+  }
+
+  .tr-blip-tag {
+    font-size: 0.4rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tr-sweep-rotator,
+  .tr-blip-pulse,
+  .tr-blip-bracket,
+  .tr-status-dot {
+    animation: none;
+  }
+
+  .tr-sweep-rotator {
+    transform: rotate(42deg);
+  }
+}
+

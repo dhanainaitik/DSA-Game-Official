@@ -48,7 +48,7 @@
   --error-bg: #FEE2E2;
 
   /* Sizes */
-  --navbar-h: 90px;
+  --navbar-h: 64px;
   --radius-sm: 0px;
   /* Pure sharp edges for that print feel */
   --radius: 2px;
@@ -261,38 +261,39 @@
   border-color: #FFD600;
 }
 
-/* ── Dark: Navbar ── */
+/* ── Dark: Navbar (aligned with unified dark navbar) ── */
 [data-theme="dark"] .navbar {
-  background: #111;
-  border-bottom-color: #FFD600;
+  background: #080808;
+  border-bottom-color: #303030;
 }
 [data-theme="dark"] .navbar-link {
-  color: var(--text-primary);
+  color: #777777;
 }
 [data-theme="dark"] .navbar-link:hover {
-  background: rgba(255, 214, 0, 0.12);
+  background: #151515;
+  color: #F5F5F5;
 }
 [data-theme="dark"] .navbar-link.active {
-  background: #FFD600;
-  color: #000;
-  border-color: #000;
-  box-shadow: 4px 4px 0px #000;
+  background: #151515;
+  color: #FFE500;
+  border-color: #303030;
+  box-shadow: none;
 }
 [data-theme="dark"] .stat-item.coins {
-  background: var(--bg-elevated);
-  border-color: #FFD600;
-  color: #FFD600;
-  box-shadow: 2px 2px 0px #FFD600;
+  background: #111111;
+  border-color: #303030;
+  color: #FFE500;
+  box-shadow: none;
 }
 [data-theme="dark"] .stat-item.level {
-  background: #FFD600;
-  color: #000;
-  border-color: #000;
+  background: #FFE500;
+  color: #080808;
+  border-color: #FFE500;
 }
 [data-theme="dark"] .user-control {
-  background: var(--bg-elevated);
-  border-color: #FFD600;
-  box-shadow: 2px 2px 0px #FFD600;
+  background: #111111;
+  border-color: #303030;
+  box-shadow: none;
 }
 
 /* ── Dark: Battle Arena (Question page) ── */
