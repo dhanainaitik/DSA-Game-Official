@@ -1,0 +1,520 @@
+/* ─── Linked List Visit Lab (Stages 1–5) — Cream / Black / Yellow / Emerald Editorial Style ─── */
+
+.ll-stage-wrap {
+  width: 100%;
+  max-width: 1040px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.ll-banner-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: #ffffff;
+  border: 2px solid #000000;
+  box-shadow: 3px 3px 0px #ffd600;
+}
+
+.ll-banner-title {
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #000000;
+}
+
+.ll-banner-sub {
+  font-size: 0.85rem;
+  color: #44403c;
+}
+
+/* ─── Controls & Form Inputs (Touch + Experiment) ─── */
+
+.ll-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  background: #ffffff;
+  border: 2px solid #000000;
+  box-shadow: 4px 4px 0px #000000;
+  padding: 1rem;
+}
+
+.ll-toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.ll-input-group {
+  display: inline-flex;
+  align-items: center;
+  border: 2px solid #000000;
+  background: #fcf6e5;
+}
+
+.ll-input-label {
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.45rem 0.55rem;
+  background: #000000;
+  color: #ffd600;
+  text-transform: uppercase;
+}
+
+.ll-input {
+  width: 78px;
+  border: none;
+  background: transparent;
+  padding: 0.42rem 0.55rem;
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #000000;
+  outline: none;
+}
+
+.ll-select {
+  border: 2px solid #000000;
+  background: #ffffff;
+  padding: 0.44rem 0.65rem;
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #000000;
+  cursor: pointer;
+}
+
+.ll-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.48rem 0.85rem;
+  background: #ffffff;
+  border: 2px solid #000000;
+  box-shadow: 2px 2px 0px #000000;
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #000000;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.1s ease;
+}
+
+.ll-btn:hover:not(:disabled) {
+  background: #ffd600;
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px #000000;
+}
+
+.ll-btn:active:not(:disabled) {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0px #000000;
+}
+
+.ll-btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.ll-btn-primary {
+  background: #059669;
+  color: #ffffff;
+}
+
+.ll-btn-primary:hover:not(:disabled) {
+  background: #047857;
+  color: #ffffff;
+}
+
+.ll-btn-accent {
+  background: #ffd600;
+  color: #000000;
+}
+
+.ll-btn-danger {
+  background: #fef2f2;
+  color: #991b1b;
+  border-color: #991b1b;
+}
+
+.ll-btn-danger:hover:not(:disabled) {
+  background: #fee2e2;
+}
+
+.ll-preset-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: auto;
+}
+
+.ll-preset-chip {
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.25rem 0.55rem;
+  background: #f5f0e1;
+  border: 1.5px solid #000000;
+  cursor: pointer;
+  color: #111111;
+}
+
+.ll-preset-chip:hover {
+  background: #ffd600;
+}
+
+/* ─── Execution Step Narrator & Playback Strip ─── */
+
+.ll-trace-card {
+  background: #ffffff;
+  border: 2px solid #000000;
+  box-shadow: 4px 4px 0px #000000;
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.ll-trace-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.ll-trace-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #000000;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ll-complexity-badge {
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 0.16rem 0.48rem;
+  background: #111111;
+  color: #ffd600;
+  border: 1px solid #000000;
+}
+
+.ll-trace-desc {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: #292524;
+  margin: 0;
+}
+
+.ll-trace-code {
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: #111111;
+  color: #00f0a0;
+  padding: 0.45rem 0.75rem;
+  border-left: 4px solid #ffd600;
+  overflow-x: auto;
+}
+
+.ll-error-banner {
+  background: #fef2f2;
+  border: 2px solid #dc2626;
+  color: #991b1b;
+  padding: 0.55rem 0.85rem;
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+/* ─── Memory Overview (Stage 1) ─── */
+
+.ll-takeaways-card {
+  background: #ffffff;
+  border: 2px solid #000000;
+  box-shadow: 4px 4px 0px #000000;
+  padding: 1.15rem 1.25rem;
+}
+
+.ll-section-kicker {
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #059669;
+  margin-bottom: 0.4rem;
+}
+
+.ll-takeaways-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.ll-takeaway-item {
+  border: 1.5px solid #000000;
+  background: #fcf6e5;
+  padding: 0.75rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.ll-takeaway-item strong {
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  color: #000000;
+}
+
+.ll-takeaway-item span {
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: #292524;
+}
+
+/* ─── Experiment Scenario Picker & Progress Strip ─── */
+
+.ll-scenario-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.ll-scenario-btn {
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.45rem 0.75rem;
+  border: 2px solid #000000;
+  background: #ffffff;
+  color: #000000;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.ll-scenario-btn.active {
+  background: #059669;
+  color: #ffffff;
+  box-shadow: 2px 2px 0px #000000;
+}
+
+.ll-scenario-btn:hover:not(.active) {
+  background: #ffd600;
+}
+
+.ll-summary-compare {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.ll-summary-box {
+  background: #fcf6e5;
+  border: 1.5px solid #000000;
+  padding: 0.55rem 0.75rem;
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.74rem;
+}
+
+.ll-summary-box strong {
+  display: block;
+  font-size: 0.65rem;
+  color: #57534e;
+  margin-bottom: 0.2rem;
+}
+
+.ll-step-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.ll-step-dot {
+  min-width: 28px;
+  height: 26px;
+  padding: 0 0.4rem;
+  border: 1.5px solid #000000;
+  background: #ffffff;
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ll-step-dot.active {
+  background: #ffd600;
+  box-shadow: 2px 2px 0px #000000;
+}
+
+.ll-step-dot.done {
+  background: #d1fae5;
+  border-color: #059669;
+}
+
+/* ─── Stage 4 UNDERSTAND — Interactive 9-Concept Mastery Explorer ─── */
+
+.ll-understand-wrap {
+  width: 100%;
+  max-width: 1040px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+.ll-concept-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  background: #ffffff;
+  border: 2px solid #000000;
+  box-shadow: 3px 3px 0px #000000;
+  padding: 0.75rem;
+}
+
+.ll-concept-tab {
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.42rem 0.72rem;
+  border: 1.5px solid #000000;
+  background: #fcf6e5;
+  color: #000000;
+  cursor: pointer;
+}
+
+.ll-concept-tab.active {
+  background: #000000;
+  color: #ffd600;
+}
+
+.ll-concept-card {
+  background: #ffffff;
+  border: 2px solid #000000;
+  box-shadow: 5px 5px 0px #000000;
+  padding: 1.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ll-concept-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border-bottom: 2px solid #000000;
+  padding-bottom: 0.65rem;
+}
+
+.ll-concept-card-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #000000;
+  margin: 0;
+}
+
+.ll-concept-split {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  gap: 1rem;
+}
+
+.ll-code-block {
+  background: #111111;
+  color: #f5f5f4;
+  border: 2px solid #000000;
+  padding: 0.9rem 1rem;
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  overflow-x: auto;
+  margin: 0;
+  white-space: pre;
+}
+
+.ll-dry-run-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.74rem;
+  background: #ffffff;
+}
+
+.ll-dry-run-table th,
+.ll-dry-run-table td {
+  border: 1.5px solid #000000;
+  padding: 0.48rem 0.6rem;
+  text-align: left;
+}
+
+.ll-dry-run-table th {
+  background: #000000;
+  color: #ffd600;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+}
+
+.ll-dry-run-table tr.ll-row-highlight td {
+  background: #ecfdf5;
+  font-weight: 700;
+}
+
+.ll-callout {
+  background: #fffbeb;
+  border: 2px solid #000000;
+  border-left: 5px solid #d97706;
+  padding: 0.7rem 0.9rem;
+  font-size: 0.85rem;
+  line-height: 1.48;
+  color: #1c1917;
+}
+
+/* ─── Stage 5 CODE — Challenge Examples & Execution Trace ─── */
+
+.ll-problem-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-top: 0.35rem;
+}
+
+.ll-example-box {
+  background: #fcf6e5;
+  border: 1.5px solid #000000;
+  padding: 0.55rem 0.75rem;
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 780px) {
+  .ll-concept-split,
+  .ll-summary-compare {
+    grid-template-columns: 1fr;
+  }
+
+  .ll-preset-group {
+    margin-left: 0;
+  }
+}
+

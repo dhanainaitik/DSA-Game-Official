@@ -1,0 +1,608 @@
+/* ─── Reusable Memory & Pointer Visualizer (Linked List / Stack / Queue / Graph ready) ─── */
+
+.pnd-shell {
+  width: 100%;
+  background: #ffffff;
+  border: 2px solid #000000;
+  box-shadow: 4px 4px 0px #000000;
+  display: flex;
+  flex-direction: column;
+}
+
+.pnd-shell.pnd-compact {
+  box-shadow: 3px 3px 0px #000000;
+}
+
+.pnd-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: #fcf6e5;
+  border-bottom: 2px solid #000000;
+}
+
+.pnd-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.pnd-title-tag {
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #111111;
+}
+
+.pnd-len-badge {
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  background: #000000;
+  color: #ffd600;
+}
+
+.pnd-vars-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.pnd-var-pill {
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 0.18rem 0.5rem;
+  border: 1.5px solid #000000;
+  background: #ffffff;
+  color: #111111;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.pnd-var-pill.is-null {
+  background: #f5f5f4;
+  color: #57534e;
+  border-style: dashed;
+}
+
+.pnd-var-pill[data-role='head'] {
+  background: #d1fae5;
+  color: #065f46;
+  border-color: #059669;
+}
+
+.pnd-var-pill[data-role='tail'] {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #d97706;
+}
+
+.pnd-var-pill[data-role='curr'] {
+  background: #ffd600;
+  color: #000000;
+}
+
+.pnd-var-pill[data-role='prev'] {
+  background: #dbeafe;
+  color: #1e40af;
+  border-color: #2563eb;
+}
+
+.pnd-var-pill[data-role='nextNode'] {
+  background: #ede9fe;
+  color: #5b21b6;
+  border-color: #7c3aed;
+}
+
+.pnd-var-pill[data-role='slow'] {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #16a34a;
+}
+
+.pnd-var-pill[data-role='fast'] {
+  background: #ffedd5;
+  color: #9a3412;
+  border-color: #ea580c;
+}
+
+.pnd-var-pill[data-role='newNode'] {
+  background: #ccfbf1;
+  color: #115e59;
+  border-color: #0d9488;
+}
+
+.pnd-var-pill[data-role='removed'] {
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #dc2626;
+}
+
+/* ─── Scrollable Memory Canvas ─── */
+
+.pnd-scroll {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: #ffffff;
+  background-image: radial-gradient(#e5e5e5 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+.pnd-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+
+.pnd-scroll::-webkit-scrollbar-track {
+  background: #f5f0e1;
+  border-top: 1px solid #000;
+}
+
+.pnd-scroll::-webkit-scrollbar-thumb {
+  background: #000000;
+}
+
+.pnd-track {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  min-width: max-content;
+  padding: 50px 18px 58px 18px;
+}
+
+.pnd-compact .pnd-track {
+  gap: 30px;
+  padding: 44px 18px 46px 18px;
+}
+
+.pnd-arrows-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+  overflow: visible;
+}
+
+/* ─── External HEAD Box ─── */
+
+.pnd-slot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  z-index: 3;
+}
+
+.pnd-slot.is-detached-above {
+  transform: translateY(-10px);
+}
+
+.pnd-slot.is-removing {
+  opacity: 0.65;
+}
+
+.pnd-head-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 74px;
+  background: #059669;
+  color: #ffffff;
+  border: 2px solid #000000;
+  box-shadow: 3px 3px 0px #000000;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.pnd-head-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0px #000000;
+}
+
+.pnd-head-btn.is-selected {
+  outline: 3px solid #ffd600;
+  outline-offset: 2px;
+}
+
+.pnd-head-label {
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 0.25rem 0.5rem;
+  border-bottom: 1.5px solid rgba(0, 0, 0, 0.35);
+  background: #047857;
+  text-align: center;
+}
+
+.pnd-head-addr {
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  padding: 0.45rem 0.55rem;
+  text-align: center;
+}
+
+/* ─── Pointer Badges Above / Below Nodes ─── */
+
+.pnd-tags-above {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.pnd-tags-below {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.pnd-ptr-tag {
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 0.12rem 0.38rem;
+  border: 1.5px solid #000000;
+  background: #ffffff;
+  color: #000000;
+  text-transform: uppercase;
+  box-shadow: 1px 1px 0px #000;
+}
+
+.pnd-ptr-tag[data-role='HEAD'] {
+  background: #059669;
+  color: #ffffff;
+}
+
+.pnd-ptr-tag[data-role='TAIL'] {
+  background: #ffd600;
+  color: #000000;
+}
+
+.pnd-ptr-tag[data-role='curr'] {
+  background: #ffd600;
+  color: #000000;
+}
+
+.pnd-ptr-tag[data-role='prev'] {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.pnd-ptr-tag[data-role='nextNode'] {
+  background: #7c3aed;
+  color: #ffffff;
+}
+
+.pnd-ptr-tag[data-role='slow'] {
+  background: #16a34a;
+  color: #ffffff;
+}
+
+.pnd-ptr-tag[data-role='fast'] {
+  background: #ea580c;
+  color: #ffffff;
+}
+
+.pnd-ptr-tag[data-role='newNode'] {
+  background: #0d9488;
+  color: #ffffff;
+}
+
+.pnd-ptr-tag[data-role='removed'] {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+/* ─── Node Memory Card (DATA | NEXT) ─── */
+
+.pnd-node-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 118px;
+  background: #ffffff;
+  border: 2.5px solid #000000;
+  box-shadow: 4px 4px 0px #000000;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.pnd-compact .pnd-node-card {
+  min-width: 112px;
+  box-shadow: 3px 3px 0px #000000;
+}
+
+.pnd-node-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 5px 5px 0px #000000;
+}
+
+.pnd-node-card.is-highlighted {
+  background: #fffbeb;
+  border-color: #000000;
+  box-shadow: 5px 5px 0px #ffd600;
+}
+
+.pnd-node-card.is-found {
+  background: #ecfdf5;
+  border-color: #059669;
+  box-shadow: 5px 5px 0px #10b981;
+}
+
+.pnd-node-card.is-selected {
+  outline: 3px solid #ffd600;
+  outline-offset: 2px;
+}
+
+.pnd-node-card.is-detached {
+  border-style: dashed;
+  background: #f0fdfa;
+}
+
+.pnd-node-card.is-removing {
+  border-style: dashed;
+  border-color: #dc2626;
+  background: #fef2f2;
+}
+
+.pnd-node-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  padding: 0.22rem 0.5rem;
+  background: #111111;
+  color: #ffffff;
+  border-bottom: 2px solid #000000;
+}
+
+.pnd-node-addr {
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #ffd600;
+}
+
+.pnd-node-idx {
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  color: #d4d4d8;
+}
+
+.pnd-node-compartments {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+}
+
+.pnd-cell {
+  border: none;
+  background: transparent;
+  padding: 0.45rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.18rem;
+  cursor: pointer;
+  transition: background 0.12s ease;
+  text-align: center;
+}
+
+.pnd-cell:hover {
+  background: rgba(255, 214, 0, 0.22);
+}
+
+.pnd-data-cell {
+  border-right: 2px solid #000000;
+}
+
+.pnd-cell.is-cell-hot {
+  background: #fef08a;
+}
+
+.pnd-next-cell.is-cell-hot {
+  background: #d1fae5;
+}
+
+.pnd-cell-kicker {
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #57534e;
+  text-transform: uppercase;
+}
+
+.pnd-data-val {
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #000000;
+}
+
+.pnd-compact .pnd-data-val {
+  font-size: 0.95rem;
+}
+
+.pnd-next-val {
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #047857;
+}
+
+.pnd-next-val.is-null-ref {
+  color: #b91c1c;
+}
+
+/* Inline NULL marker shown beneath right/NEXT half of detached or mid-reversal node whose NEXT === NULL */
+.pnd-inline-null-pill {
+  align-self: flex-end;
+  margin-top: 8px;
+  margin-right: 10px;
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: #991b1b;
+  background: #fee2e2;
+  border: 1.5px solid #dc2626;
+  padding: 0.1rem 0.4rem;
+}
+
+/* ─── Final NULL Termination Pill ─── */
+
+.pnd-null-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 64px;
+  padding: 0.5rem 0.6rem;
+  background: #f5f5f4;
+  border: 2px dashed #000000;
+  cursor: pointer;
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+
+.pnd-null-btn:hover {
+  background: #fee2e2;
+  border-style: solid;
+  transform: translateY(-1px);
+}
+
+.pnd-null-btn.is-selected {
+  outline: 3px solid #ffd600;
+  outline-offset: 2px;
+  border-style: solid;
+  background: #fef2f2;
+}
+
+.pnd-null-main {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #b91c1c;
+}
+
+.pnd-null-sub {
+  font-size: 0.625rem;
+  color: #57534e;
+  margin-top: 0.1rem;
+}
+
+/* ─── Selected Node Inspector Panel ─── */
+
+.pnd-inspector {
+  border-top: 2px solid #000000;
+  background: #fcf6e5;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.pnd-inspector-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.pnd-inspector-title {
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #000000;
+}
+
+.pnd-inspector-hint {
+  font-size: 0.78rem;
+  color: #57534e;
+}
+
+.pnd-inspector-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.pnd-insp-box {
+  background: #ffffff;
+  border: 1.5px solid #000000;
+  padding: 0.45rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.pnd-insp-label {
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #57534e;
+}
+
+.pnd-insp-val {
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #000000;
+  word-break: break-word;
+}
+
+.pnd-insp-explain {
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: #1c1917;
+  background: #ffffff;
+  border-left: 4px solid #059669;
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid #e7e5e4;
+  border-right: 1px solid #e7e5e4;
+  border-bottom: 1px solid #e7e5e4;
+}
+
+.pnd-memory-note {
+  padding: 0.45rem 1rem;
+  background: #f5f5f4;
+  border-top: 1px solid #d6d3d1;
+  font-size: 0.74rem;
+  color: #57534e;
+  line-height: 1.4;
+}
+
+@media (max-width: 720px) {
+  .pnd-inspector-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

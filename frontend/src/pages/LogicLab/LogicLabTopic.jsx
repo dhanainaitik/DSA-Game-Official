@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, ChevronRight } from 'lucide-react';
 import CodeMirror from '@uiw/react-codemirror';
@@ -13,6 +13,8 @@ import HintPanel from '../../components/Hint/HintPanel';
 import ArrayVisualizer from './visualizers/ArrayVisualizer';
 import StringVisualizer from './visualizers/StringVisualizer';
 import LinkedListVisualizer from './visualizers/LinkedListVisualizer';
+import LinkedListUnderstandStage from './visualizers/linkedlist/LinkedListUnderstandStage';
+import LinkedListCodeTrace from './visualizers/linkedlist/LinkedListCodeTrace';
 import StackQueueVisualizer from './visualizers/StackQueueVisualizer';
 import TreeVisualizer from './visualizers/TreeVisualizer';
 import GraphVisualizer from './visualizers/GraphVisualizer';
@@ -51,6 +53,7 @@ export default function LogicLabTopic() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [hintLevel, setHintLevel] = useState(1);
+  const [runPulse, setRunPulse] = useState(0);
 
   // Reset hint state and code when navigating to a different topic
   useEffect(() => {
@@ -58,6 +61,7 @@ export default function LogicLabTopic() {
     setHintLevel(1);
     setChallengeCode(topic?.challenge?.starterCode || '');
     setChallengeResult(null);
+    setRunPulse(0);
   }, [topicId]);
 
   if (!topic) return (
@@ -67,8 +71,21 @@ export default function LogicLabTopic() {
   const Visualizer = VISUALIZERS[topicId];
   const currentStep = STEPS[stepIdx];
 
+  const matchesExpected = (actual, expected) => {
+    if (actual === expected || JSON.stringify(actual) === JSON.stringify(expected)) {
+      return true;
+    }
+    if (actual && typeof actual === 'object' && 'val' in actual && typeof expected !== 'object') {
+      return actual.val === expected;
+    }
+    return false;
+  };
+
   // Dry Run: Tests sample case or checks syntax — DOES NOT AWARD COINS
   const runChallenge = () => {
+    if (topicId === 'linked-lists') {
+      setRunPulse((p) => p + 1);
+    }
     try {
       const fnName = topic?.challenge?.fnName || topic?.challenge?.starterCode?.match(/function\s+(\w+)/)?.[1] || 'solve';
       // eslint-disable-next-line no-new-func
@@ -82,10 +99,11 @@ export default function LogicLabTopic() {
       if (sampleCase) {
         const args = Array.isArray(sampleCase.input) ? sampleCase.input : [sampleCase.input];
         const actual = userFn(...JSON.parse(JSON.stringify(args)));
-        const actualStr = JSON.stringify(actual);
+        const actualValDisplay =
+          actual && typeof actual === 'object' && 'val' in actual ? `Node(${actual.val})` : JSON.stringify(actual);
         const expectedStr = JSON.stringify(sampleCase.expected);
 
-        if (actualStr === expectedStr || actual === sampleCase.expected) {
+        if (matchesExpected(actual, sampleCase.expected)) {
           setChallengeResult({
             success: true,
             msg: `✓ Dry run passed on sample test case! Click "Submit Solution" to test all cases and claim +20 coins.`,
@@ -93,7 +111,7 @@ export default function LogicLabTopic() {
         } else {
           setChallengeResult({
             success: false,
-            msg: `Dry run failed on sample case: Expected ${expectedStr}, got ${actualStr}`,
+            msg: `Dry run failed on sample case: Expected ${expectedStr}, got ${actualValDisplay}`,
           });
         }
       } else {
@@ -109,6 +127,9 @@ export default function LogicLabTopic() {
 
   // Authoritative Submission: Validates all test cases & awards +20 coins for first-time solve
   const submitChallenge = () => {
+    if (topicId === 'linked-lists') {
+      setRunPulse((p) => p + 1);
+    }
     setIsSubmitting(true);
     try {
       const fnName = topic?.challenge?.fnName || topic?.challenge?.starterCode?.match(/function\s+(\w+)/)?.[1] || 'solve';
@@ -127,13 +148,14 @@ export default function LogicLabTopic() {
         const tc = testCases[i];
         const args = Array.isArray(tc.input) ? tc.input : [tc.input];
         const actual = userFn(...JSON.parse(JSON.stringify(args)));
-        const actualStr = JSON.stringify(actual);
+        const actualValDisplay =
+          actual && typeof actual === 'object' && 'val' in actual ? `Node(${actual.val})` : JSON.stringify(actual);
         const expectedStr = JSON.stringify(tc.expected);
 
-        if (actualStr === expectedStr || actual === tc.expected) {
+        if (matchesExpected(actual, tc.expected)) {
           passedCount++;
         } else if (!firstFailure) {
-          firstFailure = `Test #${i + 1} Failed: Expected ${expectedStr}, got ${actualStr}`;
+          firstFailure = `Test #${i + 1} Failed: Expected ${expectedStr}, got ${actualValDisplay}`;
         }
       }
 
@@ -228,46 +250,73 @@ export default function LogicLabTopic() {
 
           {/* Steps 0–2: Visualizer (see, touch, experiment) */}
           {stepIdx <= 2 && Visualizer && (
-            <div className="lab-visualizer-container">
+            <div
+              className="lab-visualizer-container"
+              style={topicId === 'linked-lists' ? { maxWidth: '1040px' } : undefined}
+            >
               <Visualizer step={stepIdx} color={topic.color} />
             </div>
           )}
 
           {/* Step 3: Understand */}
           {stepIdx === 3 && (
-            <div className="lab-concept-panel">
-              <div className="lab-concept-text">
-                <blockquote className="lab-concept-quote">
-                  "{topic.concept}"
-                </blockquote>
-                <p>{topic.description}</p>
-              </div>
-              {Visualizer && (
-                <div className="lab-visualizer-container lab-visualizer-sm">
-                  <Visualizer step={2} color={topic.color} readonly />
+            topicId === 'linked-lists' ? (
+              <LinkedListUnderstandStage />
+            ) : (
+              <div className="lab-concept-panel">
+                <div className="lab-concept-text">
+                  <blockquote className="lab-concept-quote">
+                    "{topic.concept}"
+                  </blockquote>
+                  <p>{topic.description}</p>
                 </div>
-              )}
-            </div>
+                {Visualizer && (
+                  <div className="lab-visualizer-container lab-visualizer-sm">
+                    <Visualizer step={2} color={topic.color} readonly />
+                  </div>
+                )}
+              </div>
+            )
           )}
 
           {/* Step 4: Code */}
           {stepIdx === 4 && (
-            <div className="lab-code-panel">
-              <div className="lab-code-left">
-                <div className="lab-code-example">
-                  <span className="section-label">Implementation</span>
-                  <pre className="lab-code-block" style={{ marginTop: 12 }}>
-                    {topic.codeExample}
-                  </pre>
+            <>
+              <div className="lab-code-panel">
+                <div className="lab-code-left">
+                  <div className="lab-code-example">
+                    <span className="section-label">Implementation</span>
+                    <pre className="lab-code-block" style={{ marginTop: 12 }}>
+                      {topic.codeExample}
+                    </pre>
+                  </div>
                 </div>
-              </div>
 
-              <div className="lab-code-right">
-                <span className="section-label">Mini Challenge</span>
-                <h3 style={{ marginTop: 8 }}>{topic.challenge.title}</h3>
-                <p style={{ marginTop: 6, fontSize: '0.875rem' }}>{topic.challenge.description}</p>
+                <div className="lab-code-right">
+                  <span className="section-label">Mini Challenge</span>
+                  <h3 style={{ marginTop: 8 }}>{topic.challenge.title}</h3>
+                  <p style={{ marginTop: 6, fontSize: '0.875rem' }}>{topic.challenge.description}</p>
 
-                <div className="lab-challenge-editor" style={{ marginTop: 16 }}>
+                  {(topic.challenge.examples || topic.challenge.constraints) && (
+                    <div className="ll-problem-meta">
+                      {topic.challenge.examples && (
+                        <div className="ll-example-box">
+                          {topic.challenge.examples.map((ex, i) => (
+                            <div key={ex.input}>
+                              <strong>Example {i + 1}:</strong> {ex.input} → <code>{ex.output}</code>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {topic.challenge.constraints && (
+                        <div className="ll-example-box">
+                          <strong>Constraints:</strong> {topic.challenge.constraints.join(' · ')}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="lab-challenge-editor" style={{ marginTop: 16 }}>
                   <CodeMirror
                     value={challengeCode}
                     onChange={setChallengeCode}
@@ -324,6 +373,10 @@ export default function LogicLabTopic() {
                 )}
               </div>
             </div>
+            {topicId === 'linked-lists' && (
+              <LinkedListCodeTrace runPulse={runPulse} />
+            )}
+          </>
           )}
         </div>
 

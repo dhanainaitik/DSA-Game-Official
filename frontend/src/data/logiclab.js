@@ -73,8 +73,8 @@ console.log(s.split(' '));    // ['hello', 'world']`,
     tagline: 'Nodes connected by pointers',
     color: '#059669',
     steps: ['See', 'Touch', 'Experiment', 'Understand', 'Code'],
-    description: 'Each node holds a value and a reference to the next node.',
-    concept: 'A Linked List is a chain of nodes. Each node stores a value and a pointer to the next node. No random access — must traverse from head.',
+    description: 'Each node holds a DATA value and a NEXT reference to the following node.',
+    concept: 'A Linked List is a chain of heap nodes connected by NEXT pointers. Prepend/Delete-Head run in O(1), while sequential access, Delete-Tail (in singly linked lists), and Search run in O(n).',
     codeExample: `class Node {
   constructor(val) {
     this.val = val;
@@ -83,41 +83,81 @@ console.log(s.split(' '));    // ['hello', 'world']`,
 }
 
 class LinkedList {
-  constructor() { this.head = null; }
-  
-  prepend(val) {            // O(1)
+  constructor() {
+    this.head = null;
+    this.tail = null;
+  }
+
+  prepend(val) {                  // O(1)
     const node = new Node(val);
     node.next = this.head;
     this.head = node;
+    if (!this.tail) this.tail = node;
   }
-  
-  find(val) {               // O(n)
-    let cur = this.head;
-    while (cur) {
-      if (cur.val === val) return cur;
-      cur = cur.next;
+
+  append(val) {                   // O(1) with tail
+    const node = new Node(val);
+    if (!this.head) {
+      this.head = this.tail = node;
+      return;
     }
-    return null;
+    this.tail.next = node;
+    this.tail = node;
+  }
+
+  deleteTail() {                  // O(n) in Singly Linked List
+    if (!this.head) return null;
+    if (this.head === this.tail) {
+      this.head = this.tail = null;
+      return;
+    }
+    let curr = this.head;
+    while (curr.next !== this.tail) curr = curr.next;
+    curr.next = null;
+    this.tail = curr;
+  }
+
+  reverse() {                     // O(n) time, O(1) space
+    let prev = null, curr = this.head;
+    this.tail = this.head;
+    while (curr) {
+      const nextNode = curr.next;
+      curr.next = prev;
+      prev = curr;
+      curr = nextNode;
+    }
+    this.head = prev;
   }
 }`,
     challenge: {
       title: 'Middle of the List',
-      description: 'Return the value of the middle node. If even length, return the second middle.',
+      description: 'Given the head of a singly linked list, return the middle node (or its value). If there are two middle nodes, return the second middle node.',
+      examples: [
+        { input: 'head = [1, 2, 3]', output: 'Node(2) (val: 2)' },
+        { input: 'head = [1, 2, 3, 4]', output: 'Node(3) (second middle, val: 3)' },
+      ],
+      constraints: [
+        'The number of nodes is in the range [1, 100]',
+        'Expected complexity: O(n) time, O(1) extra space',
+      ],
       fnName: 'findMiddle',
       testCases: [
-        { input: [{ val: 1, next: { val: 2, next: { val: 3, next: null } } }], expected: 2 },
-        { input: [{ val: 1, next: { val: 2, next: { val: 3, next: { val: 4, next: null } } } }], expected: 3 },
+        { input: [{ val: 1, next: { val: 2, next: { val: 3, next: null } } }], expected: 2, displayInput: '[1, 2, 3]' },
+        { input: [{ val: 1, next: { val: 2, next: { val: 3, next: { val: 4, next: null } } } }], expected: 3, displayInput: '[1, 2, 3, 4]' },
+        { input: [{ val: 10, next: { val: 20, next: { val: 30, next: { val: 40, next: { val: 50, next: null } } } } }], expected: 30, displayInput: '[10, 20, 30, 40, 50]' },
       ],
       starterCode: `function findMiddle(head) {
-  // Use fast/slow pointer technique
+  // Move slow (+1 step) and fast (+2 steps)
+  // Return slow (middle node) or slow.val
 }`,
       solution: `function findMiddle(head) {
-  let slow = head, fast = head;
+  let slow = head;
+  let fast = head;
   while (fast && fast.next) {
     slow = slow.next;
     fast = fast.next.next;
   }
-  return slow.val;
+  return slow;
 }`,
     },
   },
