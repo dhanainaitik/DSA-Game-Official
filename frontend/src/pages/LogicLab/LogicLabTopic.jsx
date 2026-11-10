@@ -5,11 +5,13 @@ import CodeMirror from '@uiw/react-codemirror';
 import { javascript } from '@codemirror/lang-javascript';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { getLabTopic } from '../../data/logiclab';
+import { getFlashcardsForTopic } from '../../data/visitLabFlashcards';
 import { getHintsForQuestion } from '../../data/hints';
 import { useProgress } from '../../context/ProgressContext';
 import { triggerGoblinDefeatEffects } from '../../utils/goblinEffects';
 import HintButton from '../../components/Hint/HintButton';
 import HintPanel from '../../components/Hint/HintPanel';
+import ConceptFlashcards from '../../components/Visualizer/ConceptFlashcards';
 import ArrayVisualizer from './visualizers/ArrayVisualizer';
 import StringVisualizer from './visualizers/StringVisualizer';
 import LinkedListVisualizer from './visualizers/LinkedListVisualizer';
@@ -200,6 +202,43 @@ export default function LogicLabTopic() {
     }
   };
 
+  const topicHeaderBlock = (
+    <div className="lab-topic-header">
+      <div
+        className="lab-topic-hero-icon"
+        style={{
+          background: `color-mix(in srgb, ${topic.color} 12%, var(--bg-elevated))`,
+          borderColor: `color-mix(in srgb, ${topic.color} 30%, var(--border))`,
+          color: topic.color,
+        }}
+      >
+        {topic.name[0]}
+      </div>
+      <div>
+        <span className="section-label">{topic.tagline}</span>
+        <h1 style={{ marginTop: 6 }}>{topic.name}</h1>
+      </div>
+    </div>
+  );
+
+  const stepNavBlock = (
+    <div className="lab-step-nav">
+      {STEPS.map((step, i) => (
+        <button
+          key={step.id}
+          className={`lab-step-btn ${i === stepIdx ? 'active' : ''} ${i < stepIdx ? 'done' : ''}`}
+          onClick={() => setStepIdx(i)}
+          style={i === stepIdx ? { '--step-color': topic.color } : {}}
+        >
+          <span className="lab-step-num">{i + 1}</span>
+          <span className="lab-step-label">{step.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+
+  const topicFlashcards = getFlashcardsForTopic(topicId);
+
   return (
     <div className="page lab-topic-page">
       <div className="container page-content animate-fadeIn">
@@ -208,38 +247,26 @@ export default function LogicLabTopic() {
           <ArrowLeft size={15} /> Logic Lab
         </button>
 
-        {/* Header */}
-        <div className="lab-topic-header">
-          <div
-            className="lab-topic-hero-icon"
-            style={{
-              background: `color-mix(in srgb, ${topic.color} 12%, var(--bg-elevated))`,
-              borderColor: `color-mix(in srgb, ${topic.color} 30%, var(--border))`,
-              color: topic.color,
-            }}
-          >
-            {topic.name[0]}
+        {/* Global topic header + stage tabs + floating concept flashcards */}
+        {topicFlashcards.length > 0 ? (
+          <div className="lab-topic-hero">
+            <div className="lab-topic-header-area">{topicHeaderBlock}</div>
+            <div className="lab-topic-flashcards-area">
+              <ConceptFlashcards
+                key={topicId}
+                topic={topicId}
+                cards={topicFlashcards}
+                accentColor={topic.color}
+              />
+            </div>
+            <div className="lab-topic-steps-area">{stepNavBlock}</div>
           </div>
-          <div>
-            <span className="section-label">{topic.tagline}</span>
-            <h1 style={{ marginTop: 6 }}>{topic.name}</h1>
-          </div>
-        </div>
-
-        {/* Step progress */}
-        <div className="lab-step-nav">
-          {STEPS.map((step, i) => (
-            <button
-              key={step.id}
-              className={`lab-step-btn ${i === stepIdx ? 'active' : ''} ${i < stepIdx ? 'done' : ''}`}
-              onClick={() => setStepIdx(i)}
-              style={i === stepIdx ? { '--step-color': topic.color } : {}}
-            >
-              <span className="lab-step-num">{i + 1}</span>
-              <span className="lab-step-label">{step.label}</span>
-            </button>
-          ))}
-        </div>
+        ) : (
+          <>
+            {topicHeaderBlock}
+            {stepNavBlock}
+          </>
+        )}
 
         {/* Step content */}
         <div className="lab-step-content animate-fadeIn" key={stepIdx}>

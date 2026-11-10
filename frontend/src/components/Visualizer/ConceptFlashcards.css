@@ -1,0 +1,641 @@
+/* ─── Global Floating Concept Flashcards — Shared Across All Visit Lab Topics ─── */
+
+.cf-root {
+  width: 100%;
+  max-width: 344px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  user-select: none;
+}
+
+.cf-stage {
+  width: 100%;
+  perspective: 900px;
+}
+
+.cf-float-wrap {
+  width: 100%;
+  animation: cf-float 5.6s ease-in-out infinite;
+  transform-origin: center center;
+}
+
+.cf-root:hover .cf-float-wrap,
+.cf-root:focus-within .cf-float-wrap {
+  animation-play-state: paused;
+}
+
+@keyframes cf-float {
+  0%,
+  100% {
+    transform: translateY(0px) rotate(-1.1deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(1deg);
+  }
+}
+
+.cf-card {
+  position: relative;
+  width: 100%;
+  background: #ffffff;
+  border: 2px solid #111111;
+  border-radius: 14px;
+  box-shadow:
+    4px 4px 0px #ffd600,
+    0px 10px 20px rgba(17, 17, 17, 0.08);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+  animation: cf-card-enter 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.cf-card.dir-prev {
+  animation: cf-card-enter-prev 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.cf-root:hover .cf-card {
+  box-shadow:
+    5px 5px 0px #ffd600,
+    0px 14px 24px rgba(17, 17, 17, 0.12);
+}
+
+@keyframes cf-card-enter {
+  from {
+    opacity: 0;
+    transform: translateX(12px) translateY(3px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) translateY(0) scale(1);
+  }
+}
+
+@keyframes cf-card-enter-prev {
+  from {
+    opacity: 0;
+    transform: translateX(-12px) translateY(3px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) translateY(0) scale(1);
+  }
+}
+
+/* Soft pastel top header ribbons (Code2Living palette + restrained topic tints) */
+.cf-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  padding: 0.48rem 0.72rem;
+  border-bottom: 1.5px solid #111111;
+  background: #fcf6e5;
+}
+
+.cf-card[data-tint='purple'] .cf-card-top {
+  background: #f3eeff;
+}
+
+.cf-card[data-tint='yellow'] .cf-card-top {
+  background: #fef3c7;
+}
+
+.cf-card[data-tint='mint'] .cf-card-top {
+  background: #d1fae5;
+}
+
+.cf-card[data-tint='green'] .cf-card-top {
+  background: #dcfce7;
+}
+
+.cf-card[data-tint='orange'] .cf-card-top {
+  background: #ffedd5;
+}
+
+.cf-card[data-tint='pink'] .cf-card-top {
+  background: #fce7f3;
+}
+
+.cf-card[data-tint='teal'] .cf-card-top {
+  background: #ccfbf1;
+}
+
+.cf-card[data-tint='blue'] .cf-card-top {
+  background: #dbeafe;
+}
+
+.cf-card[data-tint='cyan'] .cf-card-top {
+  background: #cffafe;
+}
+
+.cf-card[data-tint='cream'] .cf-card-top {
+  background: #fcf6e5;
+}
+
+.cf-top-left {
+  display: flex;
+  align-items: center;
+  gap: 0.42rem;
+  min-width: 0;
+}
+
+.cf-icon-chip {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  background: #ffffff;
+  border: 1.5px solid #111111;
+  color: var(--cf-accent, #7c3aed);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cf-topic-pill {
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.6125rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #111111;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cf-top-right {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-shrink: 0;
+}
+
+.cf-sparkle {
+  color: var(--cf-accent, #7c3aed);
+  display: inline-flex;
+  align-items: center;
+}
+
+.cf-card-badge {
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1.25px solid #111111;
+  color: #111111;
+}
+
+/* Body */
+.cf-card-body {
+  padding: 0.68rem 0.78rem 0.72rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.46rem;
+}
+
+.cf-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.cf-title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #111111;
+  line-height: 1.2;
+}
+
+.cf-pause-pill {
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.56rem;
+  font-weight: 700;
+  padding: 0.08rem 0.32rem;
+  border-radius: 999px;
+  background: #fef08a;
+  border: 1px solid #111111;
+  color: #111111;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.cf-root:hover .cf-pause-pill,
+.cf-root:focus-within .cf-pause-pill {
+  opacity: 1;
+}
+
+.cf-copy {
+  margin: 0;
+  font-size: 0.77rem;
+  line-height: 1.42;
+  color: #292524;
+}
+
+/* ─── Miniature Concept Diagrams ─── */
+
+.cf-visual-box {
+  background: #fcf6e5;
+  border: 1.5px solid #111111;
+  border-radius: 10px;
+  padding: 0.48rem 0.52rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.34rem;
+}
+
+.cf-mini-caption {
+  font-size: 0.65rem;
+  line-height: 1.32;
+  color: #44403c;
+  text-align: center;
+}
+
+.cf-badges-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+.cf-stat-badge {
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.64rem;
+  font-weight: 700;
+  padding: 0.14rem 0.44rem;
+  border-radius: 999px;
+  border: 1.25px solid #111111;
+  background: #ffffff;
+  color: #111111;
+}
+
+/* Horizontal Cells */
+.cf-cells-row {
+  display: grid;
+  gap: 0.32rem;
+}
+
+.cf-cell-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.cf-cell-val {
+  width: 100%;
+  text-align: center;
+  padding: 0.26rem 0.14rem;
+  background: #ffffff;
+  border: 1.5px solid #111111;
+  border-radius: 7px;
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #111111;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cf-cell-item.is-hot .cf-cell-val {
+  background: #fef08a;
+  border-color: var(--cf-accent, #7c3aed);
+  box-shadow: 1.5px 1.5px 0px #111111;
+}
+
+.cf-cell-top {
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: #57534e;
+}
+
+.cf-cell-item.is-hot .cf-cell-top {
+  color: var(--cf-accent, #7c3aed);
+}
+
+/* Two-row index grid */
+.cf-index-grid {
+  display: grid;
+  gap: 0.22rem;
+  align-items: center;
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+}
+
+.cf-grid-head {
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: #57534e;
+}
+
+.cf-grid-pill {
+  text-align: center;
+  padding: 0.18rem 0.1rem;
+  border-radius: 6px;
+  background: #ffffff;
+  border: 1.25px solid #111111;
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: #111111;
+}
+
+.cf-grid-pill.is-hot {
+  background: #fef08a;
+  border: 1.5px solid var(--cf-accent, #7c3aed);
+}
+
+/* Connected Chain (memory / pointers / queue / recursion descent) */
+.cf-chain-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.16rem;
+}
+
+.cf-chain-node {
+  flex: 1;
+  min-width: 0;
+  background: #ffffff;
+  border: 1.5px solid #111111;
+  border-radius: 7px;
+  padding: 0.22rem 0.16rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.06rem;
+}
+
+.cf-chain-row[data-tone='mint'] .cf-chain-node,
+.cf-chain-row[data-tone='green'] .cf-chain-node {
+  background: #ecfdf5;
+}
+
+.cf-chain-row[data-tone='teal'] .cf-chain-node {
+  background: #f0fdfa;
+}
+
+.cf-chain-node.is-hot {
+  background: #fef08a !important;
+  border-color: var(--cf-accent, #059669);
+}
+
+.cf-chain-top {
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: #047857;
+}
+
+.cf-chain-val {
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #111111;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cf-chain-arrow {
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: #111111;
+  flex-shrink: 0;
+}
+
+/* Dual Metric Chips */
+.cf-metrics-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.42rem;
+}
+
+.cf-metric-chip {
+  border: 1.5px solid #111111;
+  border-radius: 8px;
+  padding: 0.32rem 0.4rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.06rem;
+  background: #ffffff;
+}
+
+.cf-metric-chip.is-good {
+  background: #d1fae5;
+}
+
+.cf-metric-chip.is-warn {
+  background: #fef3c7;
+}
+
+.cf-metric-label {
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #1c1917;
+}
+
+.cf-metric-val {
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: #000000;
+}
+
+.cf-metric-sub {
+  font-size: 0.58rem;
+  color: #44403c;
+}
+
+/* Mini Vertical Stack */
+.cf-stack-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  max-width: 210px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.cf-stack-frame {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.22rem 0.5rem;
+  border-radius: 6px;
+  border: 1.5px solid #111111;
+  background: #ffffff;
+  font-family: 'Space Mono', 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.cf-stack-frame.is-hot {
+  background: #fef08a;
+  border-color: var(--cf-accent, #d97706);
+}
+
+.cf-stack-note {
+  font-size: 0.56rem;
+  color: #57534e;
+}
+
+/* Mini Binary Tree & Mini Graph SVGs */
+.cf-mini-svg-wrap {
+  display: flex;
+  justify-content: center;
+}
+
+/* ─── Controls (Arrows & 5 Pagination Dots) ─── */
+
+.cf-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+}
+
+.cf-nav-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1.5px solid #111111;
+  box-shadow: 1.5px 1.5px 0px #000000;
+  color: #111111;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+
+.cf-nav-btn:hover {
+  background: #ffd600;
+  transform: translateY(-1px);
+}
+
+.cf-dots {
+  display: flex;
+  align-items: center;
+  gap: 0.34rem;
+}
+
+.cf-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  border: 1.25px solid #111111;
+  background: #ffffff;
+  padding: 0;
+  cursor: pointer;
+  transition: width 0.2s ease, background 0.2s ease;
+}
+
+.cf-dot.active {
+  width: 19px;
+  background: var(--cf-accent, #7c3aed);
+}
+
+.cf-dot:hover:not(.active) {
+  background: #ffd600;
+}
+
+/* ─── Global Hero Integration Across Every Visit Lab Topic ─── */
+
+.lab-topic-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 344px;
+  grid-template-areas:
+    'header cards'
+    'steps cards';
+  column-gap: 32px;
+  align-items: start;
+  margin-bottom: 12px;
+}
+
+.lab-topic-header-area {
+  grid-area: header;
+}
+
+.lab-topic-steps-area {
+  grid-area: steps;
+}
+
+.lab-topic-steps-area .lab-step-nav {
+  margin-bottom: 16px;
+}
+
+.lab-topic-flashcards-area {
+  grid-area: cards;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+}
+
+@media (max-width: 1023px) {
+  .lab-topic-hero {
+    grid-template-columns: minmax(0, 1fr) 282px;
+    grid-template-areas:
+      'header cards'
+      'steps steps';
+    column-gap: 20px;
+    row-gap: 12px;
+  }
+
+  .lab-topic-flashcards-area {
+    padding-right: 4px;
+  }
+
+  .cf-root {
+    max-width: 278px;
+  }
+}
+
+@media (max-width: 767px) {
+  .lab-topic-hero {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .lab-topic-header-area .lab-topic-header {
+    margin-bottom: 4px;
+  }
+
+  .lab-topic-flashcards-area {
+    width: 100%;
+    padding-right: 0;
+    justify-content: center;
+  }
+
+  .cf-root {
+    max-width: 360px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cf-float-wrap,
+  .cf-card,
+  .cf-card.dir-prev {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
