@@ -4,10 +4,10 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 14px;
+  gap: 16px;
   background: #111111;
-  border: 1px solid #303030;
-  padding: 20px 22px;
+  border: 1px solid #2A2A2A;
+  padding: 20px 24px;
   font-family: 'Space Grotesk', sans-serif;
   transition: border-color 0.2s ease, background-color 0.2s ease;
   position: relative;
@@ -15,8 +15,7 @@
 }
 
 .btc-container.fully-charged {
-  border-color: #00F0A0;
-  background: #111111;
+  border-color: rgba(0, 240, 160, 0.6);
 }
 
 /* ─── Header ──────────────────────────────────────────────────────────────── */
@@ -24,6 +23,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
 }
 
 .btc-title {
@@ -31,7 +31,7 @@
   align-items: center;
   gap: 7px;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.14em;
@@ -39,7 +39,7 @@
 }
 
 .btc-icon {
-  color: #FF6B00;
+  color: #FFE500;
   transition: color 0.25s ease;
 }
 
@@ -47,9 +47,34 @@
   color: #00F0A0;
 }
 
+.btc-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btc-state-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 7px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  border: 1px solid #2D2D2D;
+  color: #777777;
+  background: #0B0B0B;
+}
+
+.btc-state-pill.is-unlocked {
+  border-color: rgba(0, 240, 160, 0.45);
+  color: #00F0A0;
+}
+
 .btc-count {
   font-family: 'Barlow Condensed', 'Space Grotesk', sans-serif;
-  font-size: 1.5rem;
+  font-size: 1.55rem;
   font-weight: 800;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -69,7 +94,13 @@
   margin-left: 2px;
 }
 
-/* ─── 5 Token Slots ───────────────────────────────────────────────────────── */
+/* ─── Body & 5 Token Slots ────────────────────────────────────────────────── */
+.btc-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .btc-pips-row {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -78,8 +109,8 @@
 
 .btc-pip {
   position: relative;
-  height: 30px;
-  border: 1px solid #303030;
+  height: 34px;
+  border: 1px solid #2E2E2E;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -91,18 +122,18 @@
   position: relative;
   z-index: 2;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.6rem;
+  font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.05em;
 }
 
 .btc-pip.empty {
   background: #080808;
-  border-color: #303030;
+  border-color: #282828;
 }
 
 .btc-pip.empty .btc-pip-index {
-  color: #777777;
+  color: #666666;
 }
 
 .btc-pip.filled {
@@ -126,11 +157,27 @@
   pointer-events: none;
 }
 
-/* ─── Progress Track ──────────────────────────────────────────────────────── */
+.btc-explain {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: #8A8A8A;
+}
+
+/* ─── Footer Bar ──────────────────────────────────────────────────────────── */
+.btc-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #242424;
+}
+
 .btc-progress-track {
-  width: 100%;
-  height: 2px;
-  background: #303030;
+  flex: 1;
+  height: 4px;
+  background: #242424;
   overflow: hidden;
 }
 
@@ -143,38 +190,27 @@
   background: #00F0A0;
 }
 
-/* ─── Status line ─────────────────────────────────────────────────────────── */
-.btc-status {
-  display: flex;
-  align-items: center;
-  gap: 7px;
+.btc-footer-note {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.62rem;
+  font-size: 0.6rem;
   font-weight: 700;
-  text-transform: uppercase;
   letter-spacing: 0.1em;
+  color: #777777;
+  white-space: nowrap;
 }
 
-.btc-status-unlocked {
+.btc-container.fully-charged .btc-footer-note {
   color: #00F0A0;
 }
 
-.btc-status-locked {
-  color: #777777;
-}
-
-/* ─── Sizes ───────────────────────────────────────────────────────────────── */
+/* ─── Compact Size Variant ────────────────────────────────────────────────── */
 .btc-container.size-sm {
   padding: 12px 14px;
-  gap: 8px;
+  gap: 10px;
 }
 
 .btc-container.size-sm .btc-pip {
-  height: 20px;
-}
-
-.btc-container.size-sm .btc-status {
-  font-size: 0.54rem;
+  height: 22px;
 }
 
 @media (prefers-reduced-motion: reduce) {

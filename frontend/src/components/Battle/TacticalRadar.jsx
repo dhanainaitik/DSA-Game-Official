@@ -1,34 +1,34 @@
 import './TacticalRadar.css';
 
-const LOBBY_CONTACTS = {
+// Visual demo signals rendered purely as radar dots (no text/labels inside scope)
+const DEMO_SIGNALS = {
   default: [
-    { id: 'c1', x: 26, y: 31, label: 'OP-74 // LVL 09', tone: 'green',  delay: '0.1s' },
-    { id: 'c2', x: 74, y: 28, label: 'OP-19 // 1V1',    tone: 'green',  delay: '0.8s', lock: true },
-    { id: 'c3', x: 72, y: 69, label: 'SQ-04 // 2V2',    tone: 'green',  delay: '1.5s' },
-    { id: 'c4', x: 30, y: 71, label: 'DUO-2 // CO-OP',  tone: 'yellow', delay: '2.1s' },
-    { id: 'c5', x: 52, y: 21, label: 'SCAN // SECTOR',  tone: 'green',  delay: '2.7s' },
+    { id: 'sig-1', x: 28, y: 31, tone: 'green',  delay: '0.2s', glintDelay: '3.2s', pulse: true },
+    { id: 'sig-2', x: 74, y: 27, tone: 'yellow', delay: '0.9s', glintDelay: '0.5s', pulse: true },
+    { id: 'sig-3', x: 71, y: 70, tone: 'green',  delay: '1.6s', glintDelay: '1.5s', pulse: false },
+    { id: 'sig-4', x: 31, y: 72, tone: 'orange', delay: '2.2s', glintDelay: '2.4s', pulse: true },
+    { id: 'sig-5', x: 52, y: 20, tone: 'green',  delay: '2.8s', glintDelay: '0.1s', pulse: false },
   ],
   '1v1': [
-    { id: 'd1', x: 34, y: 38, label: 'YOU // READY',      tone: 'yellow', delay: '0s' },
-    { id: 'd2', x: 70, y: 62, label: 'RIVAL // DETECTED', tone: 'green',  delay: '0.8s', lock: true },
+    { id: 'd-1', x: 35, y: 38, tone: 'yellow', delay: '0s',   glintDelay: '3.2s', pulse: true },
+    { id: 'd-2', x: 69, y: 63, tone: 'green',  delay: '0.9s', glintDelay: '1.4s', pulse: true },
   ],
   duo: [
-    { id: 'u1', x: 34, y: 44, label: 'ALLY-A // SYNCED', tone: 'green',  delay: '0s', lock: true },
-    { id: 'u2', x: 66, y: 44, label: 'ALLY-B // CO-OP',  tone: 'green',  delay: '0.6s', lock: true },
-    { id: 'u3', x: 50, y: 74, label: 'TARGET // GRID',   tone: 'yellow', delay: '1.4s' },
+    { id: 'u-1', x: 34, y: 42, tone: 'green',  delay: '0s',   glintDelay: '3.0s', pulse: true },
+    { id: 'u-2', x: 66, y: 42, tone: 'green',  delay: '0.7s', glintDelay: '0.7s', pulse: true },
+    { id: 'u-3', x: 50, y: 74, tone: 'yellow', delay: '1.4s', glintDelay: '1.9s', pulse: true },
   ],
   '2v2': [
-    { id: 's1', x: 26, y: 34, label: 'ALPHA-1', tone: 'orange', delay: '0.2s', lock: true },
-    { id: 's2', x: 26, y: 66, label: 'ALPHA-2', tone: 'orange', delay: '0.6s', lock: true },
-    { id: 's3', x: 74, y: 34, label: 'OMEGA-1', tone: 'green',  delay: '1.2s' },
-    { id: 's4', x: 74, y: 66, label: 'OMEGA-2', tone: 'green',  delay: '1.8s' },
+    { id: 's-1', x: 28, y: 34, tone: 'orange', delay: '0.2s', glintDelay: '3.2s', pulse: true },
+    { id: 's-2', x: 28, y: 66, tone: 'orange', delay: '0.8s', glintDelay: '2.5s', pulse: false },
+    { id: 's-3', x: 72, y: 34, tone: 'green',  delay: '1.4s', glintDelay: '0.5s', pulse: true },
+    { id: 's-4', x: 72, y: 66, tone: 'green',  delay: '2.0s', glintDelay: '1.4s', pulse: false },
   ],
 };
 
-// Precomputed 120 perimeter degree ticks and 12 radial spokes with ring nodes
-const PERIMETER_TICKS = Array.from({ length: 120 }, (_, i) => i * 3);
-const RADIAL_SPOKES = Array.from({ length: 12 }, (_, i) => i * 30);
-const CONCENTRIC_RADII = [10, 20, 30, 40];
+const PERIMETER_TICKS = Array.from({ length: 72 }, (_, i) => i * 5);
+const RADIAL_SPOKES = Array.from({ length: 8 }, (_, i) => i * 45);
+const CONCENTRIC_RADII = [12, 23, 34, 44];
 
 export default function TacticalRadar({
   variant = 'lobby',
@@ -42,24 +42,27 @@ export default function TacticalRadar({
     : activeMode === 'bg_2v2' ? '2v2'
     : activeMode;
 
-  const contacts = variant === 'searching'
+  const isSearching = variant === 'searching';
+
+  const signals = isSearching
     ? Array.from({ length: requiredPlayers }, (_, i) => {
         const angle = ((i / requiredPlayers) * Math.PI * 2) - Math.PI / 4;
-        const radius = 28;
+        const radius = 29;
         const x = Math.round(50 + Math.cos(angle) * radius);
         const y = Math.round(50 + Math.sin(angle) * radius);
-        const locked = i === 0 || i < queueSize;
+        const matched = i === 0 || i < queueSize;
+        const degClockwiseFromTop = ((angle * 180) / Math.PI + 90 + 360) % 360;
         return {
           id: `slot-${i}`,
           x,
           y,
-          label: i === 0 ? 'SELF // LOCKED' : locked ? `OP-${i + 1} // SYNCED` : `SLOT-0${i + 1} // SCAN`,
-          tone: i === 0 ? 'yellow' : locked ? (isBattleGround ? 'orange' : 'green') : 'muted',
-          delay: `${i * 0.4}s`,
-          lock: locked,
+          tone: i === 0 ? 'yellow' : matched ? (isBattleGround ? 'orange' : 'green') : 'muted',
+          delay: `${(i * 0.45).toFixed(2)}s`,
+          glintDelay: `${((degClockwiseFromTop / 360) * 2.4).toFixed(2)}s`,
+          pulse: matched,
         };
       })
-    : (LOBBY_CONTACTS[normalizedMode] || LOBBY_CONTACTS.default);
+    : (DEMO_SIGNALS[normalizedMode] || DEMO_SIGNALS.default);
 
   const radarAccentClass =
     isBattleGround || normalizedMode === '2v2'
@@ -68,40 +71,41 @@ export default function TacticalRadar({
         ? 'radar-tone-yellow'
         : 'radar-tone-green';
 
+  const signalCountLabel = String(signals.length).padStart(2, '0');
+
   return (
     <div
       className={`tactical-radar-shell variant-${variant} ${radarAccentClass}`}
       role="region"
-      aria-label="Live Competitive Matchmaking Radar"
+      aria-label={isSearching ? 'Matchmaking queue radar' : 'Tactical radar visualization'}
     >
-      {/* Top Telemetry Header */}
+      {/* Telemetry Header Outside Radar Scope */}
       <div className="tr-topbar">
         <span className="tr-status">
           <span className="tr-status-dot" />
           <span>
-            {variant === 'searching'
-              ? `LOCKING TARGETS · ${queueSize}/${requiredPlayers}`
+            {isSearching
+              ? `MATCHMAKING · ${queueSize}/${requiredPlayers}`
               : normalizedMode
-                ? `MODE LOCK // ${normalizedMode.toUpperCase()}`
-                : 'SECTOR SCAN // ACTIVE'}
+                ? `MODE // ${normalizedMode.toUpperCase()}`
+                : 'LIVE SCANNING'}
           </span>
         </span>
-        <span className="tr-freq">
-          {isBattleGround ? 'APEX-FREQ 5.0G' : 'NET 18MS'}
+        <span className="tr-badge-meta">
+          {isSearching ? (isBattleGround ? 'APEX QUEUE' : 'QUEUE ACTIVE') : 'DEMO SCAN'}
         </span>
       </div>
 
-      {/* Circular Radar Canvas */}
+      {/* Pure Visual Circular Radar Scope (Zero Text Labels Inside) */}
       <div className="tr-scope-wrap">
+        <div className="tr-outer-ring" aria-hidden="true" />
         <div className="tr-scope">
-          {/* Vector Radar Grid matching dark green radial scope */}
           <svg className="tr-grid-svg" viewBox="0 0 100 100" aria-hidden="true">
-            {/* Outer graduated perimeter ticks */}
             {PERIMETER_TICKS.map((deg) => {
               const rad = (deg * Math.PI) / 180;
               const isMajor = deg % 30 === 0;
-              const rInner = isMajor ? 43.2 : 44.8;
-              const rOuter = 47.4;
+              const rInner = isMajor ? 45.2 : 46.6;
+              const rOuter = 48.8;
               return (
                 <line
                   key={`t-${deg}`}
@@ -110,13 +114,12 @@ export default function TacticalRadar({
                   x2={50 + Math.cos(rad) * rOuter}
                   y2={50 + Math.sin(rad) * rOuter}
                   stroke="currentColor"
-                  strokeWidth={isMajor ? '0.45' : '0.26'}
-                  opacity={isMajor ? '0.7' : '0.42'}
+                  strokeWidth={isMajor ? '0.45' : '0.24'}
+                  opacity={isMajor ? '0.65' : '0.32'}
                 />
               );
             })}
 
-            {/* Concentric range rings */}
             {CONCENTRIC_RADII.map((r) => (
               <circle
                 key={`r-${r}`}
@@ -126,91 +129,63 @@ export default function TacticalRadar({
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="0.34"
-                opacity="0.52"
+                opacity="0.46"
               />
             ))}
 
-            {/* 12 Radial spokes + bright intersection nodes */}
             {RADIAL_SPOKES.map((deg) => {
               const rad = (deg * Math.PI) / 180;
               return (
-                <g key={`s-${deg}`}>
-                  <line
-                    x1="50"
-                    y1="50"
-                    x2={50 + Math.cos(rad) * 40}
-                    y2={50 + Math.sin(rad) * 40}
-                    stroke="currentColor"
-                    strokeWidth="0.28"
-                    opacity="0.45"
-                  />
-                  {CONCENTRIC_RADII.slice(1).map((r) => (
-                    <circle
-                      key={`n-${deg}-${r}`}
-                      cx={50 + Math.cos(rad) * r}
-                      cy={50 + Math.sin(rad) * r}
-                      r="0.55"
-                      fill="currentColor"
-                      opacity="0.72"
-                    />
-                  ))}
-                </g>
+                <line
+                  key={`s-${deg}`}
+                  x1="50"
+                  y1="50"
+                  x2={50 + Math.cos(rad) * 44}
+                  y2={50 + Math.sin(rad) * 44}
+                  stroke="currentColor"
+                  strokeWidth="0.28"
+                  opacity="0.36"
+                />
               );
             })}
           </svg>
 
-          {/* Rotating Conic Sweep + Luminous Leading Beam */}
+          {/* Continuously Rotating 360-Degree Radar Sweep */}
           <div className="tr-sweep-rotator" aria-hidden="true">
             <div className="tr-sweep-cone" />
             <div className="tr-sweep-beam" />
           </div>
 
-          {/* Squad / Co-op Vector Lines */}
-          {normalizedMode === 'duo' && (
-            <svg className="tr-vector-overlay" viewBox="0 0 100 100" aria-hidden="true">
-              <line x1="34" y1="44" x2="66" y2="44" stroke="#00F0A0" strokeWidth="0.65" strokeDasharray="2 2" />
-            </svg>
-          )}
-          {normalizedMode === '2v2' && (
-            <svg className="tr-vector-overlay" viewBox="0 0 100 100" aria-hidden="true">
-              <line x1="26" y1="34" x2="26" y2="66" stroke="#FF6B00" strokeWidth="0.65" />
-              <line x1="74" y1="34" x2="74" y2="66" stroke="#00F0A0" strokeWidth="0.65" />
-              <line x1="26" y1="50" x2="74" y2="50" stroke="#777777" strokeWidth="0.45" strokeDasharray="2 2" />
-            </svg>
-          )}
-          {normalizedMode === '1v1' && (
-            <svg className="tr-vector-overlay" viewBox="0 0 100 100" aria-hidden="true">
-              <line x1="34" y1="38" x2="70" y2="62" stroke="#FFE500" strokeWidth="0.6" strokeDasharray="2 2" />
-            </svg>
-          )}
-
-          {/* Glowing Opponent / Teammate Detection Blips */}
-          {contacts.map((blip) => (
-            <div
-              key={blip.id}
-              className={`tr-blip tone-${blip.tone} ${blip.lock ? 'is-locked' : ''}`}
-              style={{ left: `${blip.x}%`, top: `${blip.y}%`, '--blip-delay': blip.delay }}
+          {/* Visual-Only Glowing Signal Dots */}
+          {signals.map((dot) => (
+            <span
+              key={dot.id}
+              className={`tr-blip tone-${dot.tone} ${dot.pulse ? 'has-pulse' : ''}`}
+              style={{
+                left: `${dot.x}%`,
+                top: `${dot.y}%`,
+                '--blip-delay': dot.delay,
+                '--glint-delay': dot.glintDelay,
+              }}
+              aria-hidden="true"
             >
-              <span className="tr-blip-pulse" aria-hidden="true" />
-              <span className="tr-blip-core" aria-hidden="true" />
-              {blip.lock && <span className="tr-blip-bracket" aria-hidden="true" />}
-              <span className="tr-blip-tag">{blip.label}</span>
-            </div>
+              {dot.pulse && <span className="tr-blip-pulse" />}
+              <span className="tr-blip-core" />
+            </span>
           ))}
 
-          {/* Center Emitter Hub */}
+          {/* Center Emitter */}
           <span className="tr-center-hub" aria-hidden="true" />
         </div>
       </div>
 
-      {/* Bottom Signal Coordinates Bar */}
+      {/* Telemetry Footer Outside Radar Scope */}
       <div className="tr-footer">
         <span className="tr-footer-metric">
-          SIGNALS: <strong>{contacts.length}</strong> ACTIVE
+          <strong>{signalCountLabel}</strong>{' '}
+          {isSearching ? 'SLOTS TRACKED' : 'SIGNALS DETECTED'}
         </span>
-        <span className="tr-footer-coords">
-          {normalizedMode ? `TARGET LOCK: ${normalizedMode.toUpperCase()}` : 'SWEEP: 360° LIVE'}
-        </span>
+        <span className="tr-footer-sweep">SWEEP ACTIVE</span>
       </div>
     </div>
   );

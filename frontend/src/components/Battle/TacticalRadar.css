@@ -1,48 +1,48 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    LIVE TACTICAL RADAR — Code2Living Competitive Zone
-   Concentric Radial Scope · Perimeter Ticks · Rotating Sweep · Glowing Blips
+   Pure Visual Radar Interior · External Status Telemetry · Synchronized Sweep
    ═══════════════════════════════════════════════════════════════════════════ */
 
 .tactical-radar-shell {
   --radar-accent: #00F0A0;
-  --radar-accent-soft: rgba(0, 240, 160, 0.3);
+  --radar-accent-soft: rgba(0, 240, 160, 0.25);
   --radar-accent-faint: rgba(0, 240, 160, 0.08);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
   padding: 14px 16px;
-  background: #080B09;
-  border: 1px solid #303030;
+  background: #0A0D0B;
+  border: 1px solid #2A2A2A;
   font-family: 'JetBrains Mono', monospace;
   position: relative;
 }
 
 .tactical-radar-shell.radar-tone-yellow {
   --radar-accent: #FFE500;
-  --radar-accent-soft: rgba(255, 229, 0, 0.28);
-  --radar-accent-faint: rgba(255, 229, 0, 0.08);
+  --radar-accent-soft: rgba(255, 229, 0, 0.26);
+  --radar-accent-faint: rgba(255, 229, 0, 0.07);
 }
 
 .tactical-radar-shell.radar-tone-orange {
   --radar-accent: #FF6B00;
-  --radar-accent-soft: rgba(255, 107, 0, 0.28);
-  --radar-accent-faint: rgba(255, 107, 0, 0.08);
+  --radar-accent-soft: rgba(255, 107, 0, 0.26);
+  --radar-accent-faint: rgba(255, 107, 0, 0.07);
 }
 
 .tactical-radar-shell.variant-searching {
   border-color: var(--radar-accent);
-  background: #060907;
+  background: #070A08;
 }
 
-/* ─── Header & Footer Bars ───────────────────────────────────────────────── */
+/* ─── Telemetry Header & Footer (Strictly Outside Scope Circle) ───────────── */
 .tr-topbar,
 .tr-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  font-size: 0.58rem;
+  font-size: 0.6rem;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -62,51 +62,74 @@
   border-radius: 50%;
   background: var(--radar-accent);
   box-shadow: 0 0 8px var(--radar-accent);
-  animation: tr-dot-blink 1.6s ease-in-out infinite;
+  animation: tr-dot-blink 1.8s ease-in-out infinite;
 }
 
 @keyframes tr-dot-blink {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.35; }
+  50%      { opacity: 0.35; }
 }
 
-.tr-freq,
-.tr-footer-coords {
+.tr-badge-meta,
+.tr-footer-sweep {
   color: #777777;
 }
 
 .tr-footer {
-  border-top: 1px solid #242424;
-  padding-top: 8px;
+  border-top: 1px solid #222222;
+  padding-top: 9px;
 }
 
 .tr-footer-metric strong {
   color: #F5F5F5;
 }
 
-/* ─── Circular Radar Scope ───────────────────────────────────────────────── */
+/* ─── Circular Radar Scope & Outer Ring ──────────────────────────────────── */
 .tr-scope-wrap {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2px 0;
+  padding: 6px 0;
+}
+
+.tr-outer-ring {
+  position: absolute;
+  width: 224px;
+  height: 224px;
+  border-radius: 50%;
+  border: 1px dashed var(--radar-accent-soft);
+  pointer-events: none;
+  animation: tr-outer-rotate 22s linear infinite;
+}
+
+.variant-searching .tr-outer-ring {
+  width: 242px;
+  height: 242px;
+}
+
+@keyframes tr-outer-rotate {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-360deg); }
 }
 
 .tr-scope {
   position: relative;
-  width: 224px;
-  height: 224px;
+  width: 210px;
+  height: 210px;
   border-radius: 50%;
-  background: radial-gradient(circle at center, var(--radar-accent-faint) 0%, #040805 68%, #020302 100%);
-  border: 1px solid rgba(0, 240, 160, 0.25);
-  box-shadow: inset 0 0 28px rgba(0, 240, 160, 0.08);
+  background: radial-gradient(circle at center, var(--radar-accent-faint) 0%, #050906 66%, #020302 100%);
+  border: 1px solid var(--radar-accent-soft);
+  box-shadow:
+    inset 0 0 26px rgba(0, 240, 160, 0.08),
+    0 0 18px rgba(0, 0, 0, 0.45);
   overflow: hidden;
   flex-shrink: 0;
 }
 
 .variant-searching .tr-scope {
-  width: 240px;
-  height: 240px;
+  width: 228px;
+  height: 228px;
 }
 
 .tr-grid-svg {
@@ -118,17 +141,18 @@
   pointer-events: none;
 }
 
-/* Rotating Sweep Beam */
+/* ─── Rotating 360° Sweep Cone & Leading Beam ────────────────────────────── */
 .tr-sweep-rotator {
   position: absolute;
-  inset: 6%;
+  inset: 5%;
   border-radius: 50%;
   pointer-events: none;
   animation: tr-sweep-spin 3.8s linear infinite;
+  will-change: transform;
 }
 
 .variant-searching .tr-sweep-rotator {
-  animation-duration: 2.2s;
+  animation-duration: 2.4s;
 }
 
 @keyframes tr-sweep-spin {
@@ -142,10 +166,10 @@
   border-radius: 50%;
   background: conic-gradient(
     from 0deg,
-    rgba(0, 240, 160, 0.34) 0deg,
-    rgba(0, 240, 160, 0.12) 28deg,
+    rgba(0, 240, 160, 0.32) 0deg,
+    rgba(0, 240, 160, 0.1) 30deg,
     rgba(0, 240, 160, 0.02) 64deg,
-    transparent 85deg,
+    transparent 84deg,
     transparent 360deg
   );
 }
@@ -153,8 +177,8 @@
 .radar-tone-yellow .tr-sweep-cone {
   background: conic-gradient(
     from 0deg,
-    rgba(255, 229, 0, 0.3) 0deg,
-    rgba(255, 229, 0, 0.09) 34deg,
+    rgba(255, 229, 0, 0.28) 0deg,
+    rgba(255, 229, 0, 0.08) 32deg,
     transparent 82deg,
     transparent 360deg
   );
@@ -163,8 +187,8 @@
 .radar-tone-orange .tr-sweep-cone {
   background: conic-gradient(
     from 0deg,
-    rgba(255, 107, 0, 0.32) 0deg,
-    rgba(255, 107, 0, 0.1) 34deg,
+    rgba(255, 107, 0, 0.3) 0deg,
+    rgba(255, 107, 0, 0.09) 32deg,
     transparent 82deg,
     transparent 360deg
   );
@@ -177,17 +201,8 @@
   width: 1.5px;
   height: 50%;
   background: var(--radar-accent);
-  box-shadow: 0 0 10px 1px var(--radar-accent);
+  box-shadow: 0 0 9px 1px var(--radar-accent);
   transform-origin: bottom center;
-}
-
-.tr-vector-overlay {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 2;
 }
 
 .tr-center-hub {
@@ -200,16 +215,16 @@
   border-radius: 50%;
   background: #F5F5F5;
   box-shadow: 0 0 8px var(--radar-accent);
-  z-index: 5;
+  z-index: 4;
 }
 
-/* ─── Opponent Detection Signals & Glowing Blips ─────────────────────────── */
+/* ─── Pure Visual Opponent Signal Dots ───────────────────────────────────── */
 .tr-blip {
   --blip-color: #00F0A0;
   position: absolute;
   transform: translate(-50%, -50%);
-  z-index: 4;
-  display: flex;
+  z-index: 3;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
 }
@@ -222,17 +237,28 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #F5F5F5;
-  border: 1.5px solid var(--blip-color);
-  box-shadow: 0 0 10px 3px var(--blip-color);
-  position: relative;
-  z-index: 2;
+  background: var(--blip-color);
+  box-shadow: 0 0 8px 2px var(--blip-color);
+  animation: tr-blip-glint 3.8s ease-out infinite;
+  animation-delay: var(--glint-delay, 0s);
+}
+
+.variant-searching .tr-blip-core {
+  animation-duration: 2.4s;
 }
 
 .tr-blip.tone-muted .tr-blip-core {
   background: #444444;
   box-shadow: none;
-  opacity: 0.55;
+  opacity: 0.45;
+  animation: none;
+}
+
+@keyframes tr-blip-glint {
+  0%   { transform: scale(1);   filter: brightness(1);   opacity: 0.72; }
+  8%   { transform: scale(1.38); filter: brightness(1.45); opacity: 1; }
+  30%  { transform: scale(1.05); filter: brightness(1.05); opacity: 0.85; }
+  100% { transform: scale(1);   filter: brightness(1);   opacity: 0.72; }
 }
 
 .tr-blip-pulse {
@@ -242,70 +268,33 @@
   border-radius: 50%;
   border: 1px solid var(--blip-color);
   opacity: 0;
-  animation: tr-blip-ping 2.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+  animation: tr-blip-ping 2.8s cubic-bezier(0, 0, 0.2, 1) infinite;
   animation-delay: var(--blip-delay, 0s);
 }
 
-.tr-blip.tone-muted .tr-blip-pulse {
-  display: none;
-}
-
 @keyframes tr-blip-ping {
-  0%   { transform: scale(0.35); opacity: 0.9; }
-  75%  { transform: scale(1.3); opacity: 0; }
-  100% { transform: scale(1.3); opacity: 0; }
-}
-
-.tr-blip-bracket {
-  position: absolute;
-  width: 15px;
-  height: 15px;
-  border: 1px solid var(--blip-color);
-  opacity: 0.85;
-  animation: tr-lock-spin 6s linear infinite;
-}
-
-@keyframes tr-lock-spin {
-  0%   { transform: rotate(0deg); }
-  100% { transform: rotate(90deg); }
-}
-
-.tr-blip-tag {
-  position: absolute;
-  top: -15px;
-  left: 50%;
-  transform: translateX(-50%);
-  white-space: nowrap;
-  padding: 1px 4px;
-  background: rgba(8, 8, 8, 0.9);
-  border: 1px solid #303030;
-  color: #F5F5F5;
-  font-size: 0.44rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  pointer-events: none;
-}
-
-.tr-blip.is-locked .tr-blip-tag {
-  border-color: var(--blip-color);
-  color: var(--blip-color);
+  0%   { transform: scale(0.35); opacity: 0.85; }
+  75%  { transform: scale(1.35); opacity: 0; }
+  100% { transform: scale(1.35); opacity: 0; }
 }
 
 @media (max-width: 560px) {
   .tr-scope {
-    width: 188px;
-    height: 188px;
+    width: 186px;
+    height: 186px;
   }
 
-  .tr-blip-tag {
-    font-size: 0.4rem;
+  .tr-outer-ring {
+    width: 200px;
+    height: 200px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .tr-sweep-rotator,
+  .tr-outer-ring,
   .tr-blip-pulse,
-  .tr-blip-bracket,
+  .tr-blip-core,
   .tr-status-dot {
     animation: none;
   }
@@ -314,4 +303,3 @@
     transform: rotate(42deg);
   }
 }
-

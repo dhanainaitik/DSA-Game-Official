@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion as Motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
-  Flame, Trophy, Crown,
+  Flame, Trophy, Crown, Shield,
   ShieldAlert, Lock, ArrowRight, ArrowUpRight
 } from 'lucide-react';
 import { useMultiplayer } from '../../context/MultiplayerContext';
@@ -13,57 +13,56 @@ import MedalBadge from '../../components/Battle/MedalBadge';
 import TacticalRadar from '../../components/Battle/TacticalRadar';
 import './BattleLobby.css';
 
-/* ─── Geometric Mode Illustrations (Clean Editorial Line Art) ──────────────── */
+/* ─── Compact Geometric Mode Illustrations ───────────────────────────────── */
 function ModeVisual({ variant }) {
   if (variant === 'duel') {
     return (
-      <svg className="mode-svg-art" viewBox="0 0 88 52" fill="none" aria-hidden="true">
-        <rect x="4" y="8" width="22" height="36" stroke="currentColor" strokeWidth="1.5" />
-        <rect x="62" y="8" width="22" height="36" stroke="currentColor" strokeWidth="1.5" />
-        <circle cx="44" cy="26" r="10" stroke="#FFE500" strokeWidth="1.5" />
-        <path d="M26 26H62M44 10V42" stroke="currentColor" strokeWidth="1.25" strokeDasharray="3 3" />
-        <rect x="41" y="23" width="6" height="6" fill="#00F0A0" />
+      <svg className="mode-svg-art" viewBox="0 0 88 48" fill="none" aria-hidden="true">
+        <rect x="6" y="8" width="20" height="32" stroke="currentColor" strokeWidth="1.5" />
+        <rect x="62" y="8" width="20" height="32" stroke="currentColor" strokeWidth="1.5" />
+        <circle cx="44" cy="24" r="9" stroke="#FFE500" strokeWidth="1.5" />
+        <path d="M26 24H62" stroke="currentColor" strokeWidth="1.25" strokeDasharray="3 3" />
+        <rect x="41.5" y="21.5" width="5" height="5" fill="#FFE500" />
       </svg>
     );
   }
   if (variant === 'duo') {
     return (
-      <svg className="mode-svg-art" viewBox="0 0 88 52" fill="none" aria-hidden="true">
-        <circle cx="28" cy="26" r="14" stroke="#00F0A0" strokeWidth="1.5" />
-        <circle cx="60" cy="26" r="14" stroke="currentColor" strokeWidth="1.5" />
-        <path d="M28 26H60" stroke="#00F0A0" strokeWidth="1.5" />
-        <circle cx="28" cy="26" r="3" fill="#00F0A0" />
-        <circle cx="60" cy="26" r="3" fill="#F5F5F5" />
-        <path d="M44 10V42" stroke="currentColor" strokeWidth="1" strokeDasharray="2 3" opacity="0.5" />
+      <svg className="mode-svg-art" viewBox="0 0 88 48" fill="none" aria-hidden="true">
+        <circle cx="29" cy="24" r="12" stroke="#00F0A0" strokeWidth="1.5" />
+        <circle cx="59" cy="24" r="12" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M29 24H59" stroke="#00F0A0" strokeWidth="1.5" />
+        <circle cx="29" cy="24" r="2.75" fill="#00F0A0" />
+        <circle cx="59" cy="24" r="2.75" fill="#F5F5F5" />
       </svg>
     );
   }
   if (variant === 'squad') {
     return (
-      <svg className="mode-svg-art" viewBox="0 0 88 52" fill="none" aria-hidden="true">
-        <rect x="6" y="8" width="14" height="14" stroke="#FF6B00" strokeWidth="1.5" />
-        <rect x="6" y="30" width="14" height="14" stroke="#FF6B00" strokeWidth="1.5" />
-        <rect x="68" y="8" width="14" height="14" stroke="currentColor" strokeWidth="1.5" />
-        <rect x="68" y="30" width="14" height="14" stroke="currentColor" strokeWidth="1.5" />
-        <path d="M20 15L44 26L20 37M68 15L44 26L68 37" stroke="currentColor" strokeWidth="1.25" />
-        <rect x="41" y="23" width="6" height="6" fill="#FFE500" />
+      <svg className="mode-svg-art" viewBox="0 0 88 48" fill="none" aria-hidden="true">
+        <rect x="8" y="7" width="13" height="13" stroke="#FF6B00" strokeWidth="1.5" />
+        <rect x="8" y="28" width="13" height="13" stroke="#FF6B00" strokeWidth="1.5" />
+        <rect x="67" y="7" width="13" height="13" stroke="currentColor" strokeWidth="1.5" />
+        <rect x="67" y="28" width="13" height="13" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M21 13.5L44 24L21 34.5M67 13.5L44 24L67 34.5" stroke="currentColor" strokeWidth="1.25" />
+        <rect x="41.5" y="21.5" width="5" height="5" fill="#FF6B00" />
       </svg>
     );
   }
   if (variant === 'bg-duel') {
     return (
-      <svg className="mode-svg-art" viewBox="0 0 88 52" fill="none" aria-hidden="true">
-        <polygon points="44,4 78,26 44,48 10,26" stroke="#FF6B00" strokeWidth="1.5" />
-        <circle cx="44" cy="26" r="9" stroke="#FFE500" strokeWidth="1.5" />
-        <circle cx="44" cy="26" r="2.5" fill="#FFE500" />
+      <svg className="mode-svg-art" viewBox="0 0 88 48" fill="none" aria-hidden="true">
+        <polygon points="44,4 76,24 44,44 12,24" stroke="#FF6B00" strokeWidth="1.5" />
+        <circle cx="44" cy="24" r="8" stroke="#FFE500" strokeWidth="1.5" />
+        <circle cx="44" cy="24" r="2.5" fill="#FFE500" />
       </svg>
     );
   }
   return (
-    <svg className="mode-svg-art" viewBox="0 0 88 52" fill="none" aria-hidden="true">
-      <polygon points="44,6 76,26 44,46 12,26" stroke="#FFE500" strokeWidth="1.5" />
-      <rect x="33" y="15" width="22" height="22" stroke="#00F0A0" strokeWidth="1.5" />
-      <path d="M12 26H76" stroke="currentColor" strokeWidth="1" strokeDasharray="3 3" opacity="0.5" />
+    <svg className="mode-svg-art" viewBox="0 0 88 48" fill="none" aria-hidden="true">
+      <polygon points="44,5 75,24 44,43 13,24" stroke="#FFE500" strokeWidth="1.5" />
+      <rect x="34" y="14" width="20" height="20" stroke="#00F0A0" strokeWidth="1.5" />
+      <path d="M13 24H75" stroke="currentColor" strokeWidth="1" strokeDasharray="3 3" opacity="0.5" />
     </svg>
   );
 }
@@ -76,7 +75,7 @@ const NORMAL_MODES = [
     visual: 'duel',
     title: '1V1 DUEL',
     subtitle: 'SOLO VS SOLO',
-    description: 'Pure individual skill. Solve faster. Deal more damage.',
+    description: 'Head-to-head problem race. Solve faster to deal decisive damage.',
     accentClass: 'mode-accent-yellow',
     players: '2 PLAYERS',
     badge: '+1 BATTLE TOKEN',
@@ -90,12 +89,12 @@ const NORMAL_MODES = [
     visual: 'duo',
     title: 'DUO MODE',
     subtitle: 'COOPERATIVE',
-    description: 'Team up. Solve together. Win together.',
+    description: 'Pair with a teammate, share progress, and defeat encounters together.',
     accentClass: 'mode-accent-green',
     players: '2 PLAYERS',
     badge: 'SHARED REWARD',
     cta: 'FIND MATCH',
-    indicator: 'COOPERATIVE',
+    indicator: 'CO-OP',
     isPrimary: false,
   },
   {
@@ -104,7 +103,7 @@ const NORMAL_MODES = [
     visual: 'squad',
     title: '2V2 BATTLE',
     subtitle: 'TEAM VS TEAM',
-    description: 'Coordinate attacks and dominate the opposing team.',
+    description: 'Coordinate attacks with your partner and outscore the rival squad.',
     accentClass: 'mode-accent-orange',
     players: '4 PLAYERS',
     badge: '+1 BATTLE TOKEN',
@@ -122,10 +121,10 @@ const BATTLE_GROUND_MODES = [
     Icon: Flame,
     title: '1V1 BATTLE GROUND',
     subtitle: 'CHAMPIONSHIP DUEL',
-    description: 'Premier elimination duel. Hard/Master problem pool. Winner earns Gold Medal, 500 Coins, 1000 XP.',
+    description: 'Premier elimination duel from the Hard/Master pool. Winner claims Gold Medal, 500 Coins, and 1000 XP.',
     accentClass: 'mode-accent-orange',
     players: '2 WARRIORS',
-    badge: 'GOLD / SILVER MEDAL',
+    badge: 'GOLD MEDAL · 500 COINS',
     cta: 'ENTER BATTLE GROUND',
     cost: '5 TOKENS',
   },
@@ -136,7 +135,7 @@ const BATTLE_GROUND_MODES = [
     Icon: Crown,
     title: '2V2 BATTLE GROUND',
     subtitle: 'ELITE SQUAD WARS',
-    description: '4-player high-stakes elimination. Team combos, synchronized coding. Winning squad claims Gold Medals.',
+    description: '4-player sudden-death squad championship with synchronized combos. Winning squad earns Gold Medals.',
     accentClass: 'mode-accent-yellow',
     players: '4 WARRIORS',
     badge: 'SQUAD MEDALS · 500 COINS',
@@ -211,29 +210,17 @@ export default function BattleLobby() {
 
   return (
     <div className="arena-page">
-      {/* Subtle architectural background grid */}
       <div className="arena-bg-grid" aria-hidden="true" />
 
       <div className="arena-inner">
 
-        {/* ── 01. Editorial Arena Hero ─────────────────────────────────────── */}
+        {/* ── 01. Clean Tactical Arena Hero ────────────────────────────────── */}
         <Motion.header
           className="arena-hero"
-          initial={prefersReducedMotion ? false : { opacity: 0, y: 14 }}
+          initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
         >
-          {/* Minimal geometric reticle lines in hero backdrop */}
-          <div className="arena-hero-geo" aria-hidden="true">
-            <span className="geo-ring" />
-            <span className="geo-cross-h" />
-            <span className="geo-cross-v" />
-            <span className="geo-tick geo-tick-tl">+</span>
-            <span className="geo-tick geo-tick-tr">+</span>
-            <span className="geo-tick geo-tick-bl">+</span>
-            <span className="geo-tick geo-tick-br">+</span>
-          </div>
-
           <div className="arena-hero-topbar">
             <div className="arena-eyebrow">
               <span className="arena-eyebrow-slash">/</span>
@@ -242,15 +229,14 @@ export default function BattleLobby() {
 
             <div className="arena-live-pill">
               <span className="arena-live-dot" />
-              <span>LIVE / COMPETITIVE MODE</span>
+              <span>LIVE COMPETITIVE MODE</span>
             </div>
           </div>
 
           <div className="arena-hero-stage">
             <div className="arena-hero-primary">
               <h1 className="arena-hero-title">
-                BATTLE<br />
-                <span className="arena-hero-title-accent">ARENA</span>
+                BATTLE <span className="arena-hero-title-accent">ARENA</span>
                 <span className="arena-hero-period">.</span>
               </h1>
 
@@ -268,15 +254,10 @@ export default function BattleLobby() {
                   <ArrowUpRight size={17} strokeWidth={2.2} className="arena-hero-cta-arrow" />
                 </button>
 
-                <div className="arena-hero-indices">
-                  <div className="hero-index-cell">
-                    <span className="hero-index-val">03</span>
-                    <span className="hero-index-lbl">MODES</span>
-                  </div>
-                  <div className="hero-index-cell">
-                    <span className="hero-index-val">05</span>
-                    <span className="hero-index-lbl">TOKENS TO APEX</span>
-                  </div>
+                <div className="arena-hero-specs" aria-label="Arena summary">
+                  <span className="hero-spec-item"><strong>03</strong> ACTIVE MODES</span>
+                  <span className="hero-spec-divider" aria-hidden="true" />
+                  <span className="hero-spec-item"><strong>05</strong> TOKENS TO APEX</span>
                 </div>
               </div>
             </div>
@@ -290,15 +271,14 @@ export default function BattleLobby() {
           </div>
         </Motion.header>
 
-        {/* ── 02. Horizontal Player Profile & Telemetry Strip ──────────────── */}
+        {/* ── 02. Horizontal Player Statistics Strip ───────────────────────── */}
         <Motion.section
           className="arena-profile-strip"
           aria-label="Player Profile and Statistics"
-          initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
+          initial={prefersReducedMotion ? false : { opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.08 }}
+          transition={{ duration: 0.28, delay: 0.06 }}
         >
-          {/* Combatant Identity */}
           <div className="profile-identity-cell">
             <div className="profile-avatar-frame">
               {user?.imageUrl ? (
@@ -310,7 +290,6 @@ export default function BattleLobby() {
             </div>
 
             <div className="profile-identity-meta">
-              <div className="profile-identity-kicker">COMBATANT</div>
               <div className="profile-identity-name">{displayName}</div>
               <div className="profile-identity-tags">
                 <span className="profile-tag-rank">RANK #{level}</span>
@@ -320,7 +299,6 @@ export default function BattleLobby() {
             </div>
           </div>
 
-          {/* Horizontal Telemetry Metrics */}
           <div className="profile-metrics-grid">
             <div className="profile-metric-cell">
               <span className="profile-metric-lbl">TOTAL COINS</span>
@@ -338,9 +316,8 @@ export default function BattleLobby() {
             </div>
           </div>
 
-          {/* Medals Achievement Ledger */}
           <div className="profile-achievements-cell">
-            <span className="profile-metric-lbl">ACHIEVEMENTS</span>
+            <span className="profile-metric-lbl">MEDALS</span>
             <div className="profile-medals-row">
               <MedalBadge type="gold" count={progress?.goldMedals || 0} size="sm" showZero />
               <MedalBadge type="silver" count={progress?.silverMedals || 0} size="sm" showZero />
@@ -349,8 +326,8 @@ export default function BattleLobby() {
           </div>
         </Motion.section>
 
-        {/* ── 03. Battle Tokens & Battle Ground Vault Strip ────────────────── */}
-        <section className="arena-vault-grid" aria-label="Battle Tokens and Battle Ground Status">
+        {/* ── 03. Balanced Battle Tokens & Apex Vault Panels ──────────────── */}
+        <section className="arena-vault-grid" aria-label="Battle Tokens and Apex Vault">
           <div className="vault-token-col">
             <BattleTokenCounter tokens={userTokens} maxTokens={maxTokens} size="md" />
           </div>
@@ -358,19 +335,22 @@ export default function BattleLobby() {
           <div className={`vault-bg-preview ${hasEntryTokens ? 'is-unlocked' : 'is-locked'}`}>
             <div className="vault-bg-top">
               <div className="vault-bg-kicker">
+                <Shield size={13} className="vault-bg-icon" />
+                <span>APEX VAULT</span>
+              </div>
+              <span className={`vault-state-pill ${hasEntryTokens ? 'is-unlocked' : 'is-locked'}`}>
                 {hasEntryTokens ? (
                   <>
                     <span className="vault-status-dot unlocked" />
-                    <span>APEX VAULT // UNLOCKED</span>
+                    <span>UNLOCKED</span>
                   </>
                 ) : (
                   <>
-                    <Lock size={12} />
-                    <span>APEX VAULT // CLASSIFIED PREVIEW</span>
+                    <Lock size={10} />
+                    <span>LOCKED</span>
                   </>
                 )}
-              </div>
-              <span className="vault-bg-ratio">{userTokens}/{maxTokens} TOKENS</span>
+              </span>
             </div>
 
             <div className="vault-bg-body">
@@ -379,8 +359,8 @@ export default function BattleLobby() {
               </div>
               <p className="vault-bg-copy">
                 {hasEntryTokens
-                  ? '5 Battle Tokens charged. Enter championship 1V1 or 2V2 elimination for Gold Medals, 500 Coins & 1000 XP.'
-                  : `${winsNeeded} more Normal PvP win${winsNeeded !== 1 ? 's' : ''} required to unlock high-stakes championship elimination.`}
+                  ? 'Championship entry is open. Compete for permanent medals and high-tier rewards.'
+                  : `Unlock requirement: 5 Battle Tokens (${winsNeeded} more PvP win${winsNeeded !== 1 ? 's' : ''} needed).`}
               </p>
               <div className="vault-bg-stakes-row">
                 <span className="vault-stake-chip">HARD POOL</span>
@@ -395,7 +375,7 @@ export default function BattleLobby() {
                 <div className="vault-bg-meter-track">
                   <div className="vault-bg-meter-fill" style={{ width: `${tokenPercent}%` }} />
                 </div>
-                <span className="vault-bg-meter-pct">{Math.round(tokenPercent)}% CHARGED</span>
+                <span className="vault-bg-meter-pct">{Math.round(tokenPercent)}%</span>
               </div>
 
               <button
@@ -428,7 +408,7 @@ export default function BattleLobby() {
           </Motion.div>
         )}
 
-        {/* ── 04. Mode Switch Tabs & Combat Modes Section ──────────────────── */}
+        {/* ── 04. Mode Switch Tabs & Battle Modes Section ──────────────────── */}
         <div id="arena-modes-section" ref={modesRef} className="arena-modes-anchor">
           {status === 'idle' && (
             <div className="arena-tabs" role="tablist" aria-label="Arena Queue Types">
@@ -464,15 +444,15 @@ export default function BattleLobby() {
           {/* ── Content Area ───────────────────────────────────────────────── */}
           <AnimatePresence mode="wait">
 
-            {/* Normal PvP Modes — Asymmetric Editorial Gaming Panels */}
+            {/* Normal PvP Modes — Equal-Height Clean 3-Card Grid */}
             {status === 'idle' && activeTab === 'normal' && (
               <Motion.div
                 key="normal"
                 className="mode-section"
-                initial={prefersReducedMotion ? false : { opacity: 0, y: 14 }}
+                initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={prefersReducedMotion ? undefined : { opacity: 0, y: -12 }}
-                transition={{ duration: 0.2 }}
+                exit={prefersReducedMotion ? undefined : { opacity: 0, y: -10 }}
+                transition={{ duration: 0.18 }}
               >
                 <div className="mode-section-header">
                   <div className="mode-section-title-wrap">
@@ -482,9 +462,9 @@ export default function BattleLobby() {
                   <span className="mode-section-count">03 MODES ACTIVE</span>
                 </div>
 
-                <div className="mode-grid-asymmetric">
-                  {NORMAL_MODES.map((card, i) => (
-                    <Motion.button
+                <div className="mode-grid-3">
+                  {NORMAL_MODES.map((card) => (
+                    <button
                       key={card.id}
                       type="button"
                       id={`mode-card-${card.id}`}
@@ -492,41 +472,27 @@ export default function BattleLobby() {
                       onClick={() => handleFindMatch(card.id)}
                       onMouseEnter={() => setHoveredMode(card.id)}
                       onMouseLeave={() => setHoveredMode(null)}
-                      initial={prefersReducedMotion ? false : { opacity: 0, y: 18 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={prefersReducedMotion ? { duration: 0 } : { delay: i * 0.06, duration: 0.25 }}
                     >
-                      <div className="mode-panel-bg-pattern" aria-hidden="true" />
-
-                      {/* Header row: massive number + angled arrow */}
                       <div className="mode-panel-head">
                         <div className="mode-panel-index-group">
                           <span className="mode-panel-num">{card.num}</span>
                           <span className="mode-panel-subtitle">{card.subtitle}</span>
                         </div>
-                        <span className="mode-panel-corner-arrow" aria-hidden="true">
-                          <ArrowUpRight size={20} strokeWidth={1.75} />
-                        </span>
+                        <span className="mode-tag mode-tag-type">{card.indicator}</span>
                       </div>
 
-                      {/* Geometric illustration + Badges */}
                       <div className="mode-panel-visual-row">
                         <div className="mode-panel-art">
                           <ModeVisual variant={card.visual} />
                         </div>
-                        <div className="mode-panel-tags">
-                          <span className="mode-tag mode-tag-players">{card.players}</span>
-                          <span className="mode-tag mode-tag-type">{card.indicator}</span>
-                        </div>
+                        <span className="mode-tag mode-tag-players">{card.players}</span>
                       </div>
 
-                      {/* Oversized heading & description */}
                       <div className="mode-panel-body">
                         <h2 className="mode-panel-title">{card.title}</h2>
                         <p className="mode-panel-desc">{card.description}</p>
                       </div>
 
-                      {/* Footer: reward info & CTA */}
                       <div className="mode-panel-footer">
                         <div className="mode-panel-reward">
                           <span className="mode-reward-lbl">REWARD</span>
@@ -537,7 +503,7 @@ export default function BattleLobby() {
                           <ArrowRight size={15} className="mode-cta-arrow" />
                         </span>
                       </div>
-                    </Motion.button>
+                    </button>
                   ))}
                 </div>
               </Motion.div>
@@ -548,10 +514,10 @@ export default function BattleLobby() {
               <Motion.div
                 key="battleground"
                 className="bg-section"
-                initial={prefersReducedMotion ? false : { opacity: 0, y: 14 }}
+                initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={prefersReducedMotion ? undefined : { opacity: 0, y: -12 }}
-                transition={{ duration: 0.2 }}
+                exit={prefersReducedMotion ? undefined : { opacity: 0, y: -10 }}
+                transition={{ duration: 0.18 }}
               >
                 <div className={`bg-tournament-banner ${hasEntryTokens ? 'banner-ready' : 'banner-locked'}`}>
                   <div className="bg-banner-left">
@@ -587,38 +553,28 @@ export default function BattleLobby() {
                 </div>
 
                 <div className="mode-grid-2">
-                  {BATTLE_GROUND_MODES.map((card, i) => (
-                    <Motion.button
+                  {BATTLE_GROUND_MODES.map((card) => (
+                    <button
                       key={card.id}
                       type="button"
                       id={`mode-card-${card.id}`}
                       className={`mode-panel ${card.accentClass} bg-mode-card ${!hasEntryTokens ? 'mode-card-disabled' : ''}`}
                       onClick={() => handleQueueBattleGround(card.id)}
                       disabled={!hasEntryTokens}
-                      initial={prefersReducedMotion ? false : { opacity: 0, y: 18 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={prefersReducedMotion ? { duration: 0 } : { delay: i * 0.08, duration: 0.25 }}
                     >
-                      <div className="mode-panel-bg-pattern" aria-hidden="true" />
-
                       <div className="mode-panel-head">
                         <div className="mode-panel-index-group">
                           <span className="mode-panel-num">{card.num}</span>
                           <span className="mode-panel-subtitle">{card.subtitle}</span>
                         </div>
-                        <span className="mode-panel-corner-arrow" aria-hidden="true">
-                          <card.Icon size={18} strokeWidth={1.75} />
-                        </span>
+                        <span className="mode-tag mode-tag-cost">{card.cost}</span>
                       </div>
 
                       <div className="mode-panel-visual-row">
                         <div className="mode-panel-art">
                           <ModeVisual variant={card.visual} />
                         </div>
-                        <div className="mode-panel-tags">
-                          <span className="mode-tag mode-tag-players">{card.players}</span>
-                          <span className="mode-tag mode-tag-cost">{card.cost}</span>
-                        </div>
+                        <span className="mode-tag mode-tag-players">{card.players}</span>
                       </div>
 
                       <div className="mode-panel-body">
@@ -645,7 +601,7 @@ export default function BattleLobby() {
                           )}
                         </span>
                       </div>
-                    </Motion.button>
+                    </button>
                   ))}
                 </div>
               </Motion.div>
@@ -676,8 +632,8 @@ export default function BattleLobby() {
                   {isBattleGround
                     ? mode === 'bg_1v1' ? 'SEARCHING FOR DUEL OPPONENT' : 'ASSEMBLING SQUAD TEAMS'
                     : mode === '1v1' ? 'FINDING OPPONENT'
-                    : mode === 'duo' ? 'FINDING CO-OP PARTNER'
-                    : 'ASSEMBLING TEAMS'}
+                      : mode === 'duo' ? 'FINDING CO-OP PARTNER'
+                        : 'ASSEMBLING TEAMS'}
                 </div>
                 <div className="mm-slots">
                   {[...Array(mode === '2v2' || mode === 'bg_2v2' ? 4 : 2)].map((_, i) => (
@@ -703,7 +659,7 @@ export default function BattleLobby() {
               <Motion.div
                 key="found"
                 className={`mm-panel mm-panel-found ${isBattleGround ? 'mm-panel-bg-found' : ''}`}
-                initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.92 }}
+                initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.94 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={prefersReducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 320, damping: 24 }}
               >
