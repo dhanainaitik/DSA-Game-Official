@@ -13,6 +13,7 @@ import { useMultiplayer } from '../../context/MultiplayerContext';
 import { useProgress } from '../../context/ProgressContext';
 import { useVoiceChat } from '../../hooks/useVoiceChat';
 import { runCode } from '../../utils/codeRunner';
+import { getStarterCode } from '../../data/problems';
 import { triggerGoblinDefeatEffects } from '../../utils/goblinEffects';
 import VoicePanel from '../../components/Battle/VoicePanel';
 import TeamCombo from '../../components/Battle/TeamCombo';
@@ -51,12 +52,23 @@ export default function MultiplayerArena() {
   const arenaRef = useRef(null);
   const typingTimeout = useRef(null);
 
+  const [codesByLanguage, setCodesByLanguage] = useState({});
+
   useEffect(() => {
-    if (problem) setCode(problem.functionSignatures?.[selectedLang] || '');
+    if (!problem) return;
+    const saved = codesByLanguage[selectedLang];
+    if (saved) {
+      setCode(saved);
+    } else {
+      const initial = getStarterCode(problem, selectedLang);
+      setCode(initial);
+      setCodesByLanguage((prev) => ({ ...prev, [selectedLang]: initial }));
+    }
   }, [problem, selectedLang]);
 
   const handleCodeChange = (val) => {
     setCode(val);
+    setCodesByLanguage((prev) => ({ ...prev, [selectedLang]: val }));
     sendTyping(roomId, true);
     clearTimeout(typingTimeout.current);
     typingTimeout.current = setTimeout(() => sendTyping(roomId, false), 1500);

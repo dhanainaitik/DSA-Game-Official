@@ -9,7 +9,7 @@ import { cppLanguageSupport, cLanguageSupport } from '../../utils/cppAutocomplet
 import { oneDark } from '@codemirror/theme-one-dark';
 import { EditorView } from '@codemirror/view';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getProblem, getState } from '../../data/problems';
+import { getProblem, getState, getStarterCode } from '../../data/problems';
 import { getRegionById } from '../../data/regions';
 import { getEnemyForProblem } from '../../data/enemies';
 import { ITEMS, RARITY_COLORS } from '../../data/items';
@@ -126,7 +126,7 @@ export default function Question() {
   useEffect(() => {
     if (!problem || isRunning || isSubmitting) return;
 
-    const starter = problem.functionSignatures?.[selectedLang] || problem.starterCode || '';
+    const starter = getStarterCode(problem, selectedLang);
     const trimmed = code.trim();
 
     const timer = setTimeout(() => {
@@ -320,7 +320,7 @@ export default function Question() {
       setCode(savedCode);
     } else {
       // Fallback to signature or legacy starterCode
-      const initialCode = problem.functionSignatures?.[selectedLang] || problem.starterCode || '';
+      const initialCode = getStarterCode(problem, selectedLang);
       setCode(initialCode);
       setCodesByLanguage(prev => ({ ...prev, [selectedLang]: initialCode }));
     }

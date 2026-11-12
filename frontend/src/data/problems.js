@@ -1,3 +1,5 @@
+import { PROBLEM_TEMPLATES, getStarterCode } from '../utils/starterCodeTemplates.js';
+
 // All problems for the practice system
 // Each region has 3 states, each state has 5 problems
 
@@ -785,3 +787,12 @@ export const getStatesForRegion = (regionId) =>
 
 export const getProblem = (id) => PROBLEMS[id];
 export const getState = (id) => STATES[id];
+export { getStarterCode };
+
+// Automatically enrich all problems with multi-language starter templates
+for (const [id, problem] of Object.entries(PROBLEMS)) {
+  if (PROBLEM_TEMPLATES[id]) {
+    problem.functionSignatures = { ...PROBLEM_TEMPLATES[id], ...(problem.functionSignatures || {}) };
+  }
+}
+
