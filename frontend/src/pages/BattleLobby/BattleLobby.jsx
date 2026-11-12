@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useMultiplayer } from '../../context/MultiplayerContext';
 import { useProgress } from '../../context/ProgressContext';
-import { useUser } from '@clerk/clerk-react';
+import { useUser } from '@clerk/react';
 import BattleTokenCounter from '../../components/Battle/BattleTokenCounter';
 import MedalBadge from '../../components/Battle/MedalBadge';
 import TacticalRadar from '../../components/Battle/TacticalRadar';

@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { useUser } from '@clerk/clerk-react';
+import { useUser } from '@clerk/react';
 import { Map, FlaskConical, ArrowRight, Swords, Sparkles, Zap, Code, Eye, Target, FlaskRound, Touchpad, Trophy, Users } from 'lucide-react';
 import { useProgress } from '../../context/ProgressContext';
 import './Home.css';

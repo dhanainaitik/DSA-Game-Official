@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect } from 'react';
-import { useUser, useAuth as useClerkAuth, useClerk } from '@clerk/clerk-react';
+import { useUser, useAuth as useClerkAuth, useClerk } from '@clerk/react';
 
 // -------------------------------------------------------
 // AuthContext — Clerk-backed drop-in replacement

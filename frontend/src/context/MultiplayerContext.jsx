@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
-import { useUser } from '@clerk/clerk-react';
+import { useUser } from '@clerk/react';
 import { useProgress } from './ProgressContext';
 
 const MultiplayerContext = createContext(null);

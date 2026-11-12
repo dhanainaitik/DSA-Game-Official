@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Map, ShoppingCart, Zap, Swords, LayoutDashboard, LogIn, Trophy, Users, Sun, Moon, Flame, Menu, X } from 'lucide-react';
-import { UserButton, SignedIn, SignedOut } from '@clerk/clerk-react';
+import { UserButton, Show } from '@clerk/react';
 import { useProgress } from '../../context/ProgressContext';
 import { useTheme } from '../../context/ThemeContext';
 import './Navbar.css';
@@ -30,7 +30,7 @@ export default function Navbar() {
           <img src="/CodoLvling.webp" alt="Codo" className="navbar-logo-img" />
         </Link>
 
-        <SignedIn>
+        <Show when="signed-in">
           <nav className="navbar-nav" aria-label="Primary Navigation">
             {NAV_ITEMS.map((item) => {
               const { path, label } = item;
@@ -100,9 +100,9 @@ export default function Navbar() {
               {mobileMenuOpen ? <X size={18} strokeWidth={1.85} /> : <Menu size={18} strokeWidth={1.85} />}
             </button>
           </div>
-        </SignedIn>
+        </Show>
 
-        <SignedOut>
+        <Show when="signed-out">
           <div className="navbar-right" style={{ marginLeft: 'auto' }}>
             <button
               type="button"
@@ -123,10 +123,10 @@ export default function Navbar() {
               <span>Sign In</span>
             </button>
           </div>
-        </SignedOut>
+        </Show>
       </div>
 
-      <SignedIn>
+      <Show when="signed-in">
         {mobileMenuOpen && (
           <nav className="navbar-mobile-drawer" aria-label="Mobile Navigation">
             {NAV_ITEMS.map((item) => {
@@ -151,7 +151,7 @@ export default function Navbar() {
             })}
           </nav>
         )}
-      </SignedIn>
+      </Show>
     </header>
   );
 }

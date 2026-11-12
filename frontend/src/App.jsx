@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { useUser } from '@clerk/clerk-react';
+import { useUser } from '@clerk/react';
 import { ProgressProvider } from './context/ProgressContext';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/Navbar/Navbar';
 import Home from './pages/Home/Home';
 import Dashboard from './pages/Dashboard/Dashboard';
@@ -30,6 +30,7 @@ import { ThemeProvider } from './context/ThemeContext';
 // Question page gets full-screen without navbar
 function Layout({ children }) {
   const location = useLocation();
+
   const fullscreen = 
     location.pathname.startsWith('/problem/') || 
     location.pathname === '/login' ||

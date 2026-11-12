@@ -3,7 +3,7 @@ import { Trophy, Medal, Zap, Swords, Star, Crown, TrendingUp, TrendingDown, Minu
 import PageHeader from '../../components/UI/PageHeader';
 import MedalBadge from '../../components/Battle/MedalBadge';
 import { useProgress } from '../../context/ProgressContext';
-import { useUser } from '@clerk/clerk-react';
+import { useUser } from '@clerk/react';
 import './Leaderboard.css';
 
 // ── Mock baseline data ──

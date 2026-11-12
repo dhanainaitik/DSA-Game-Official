@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useUser } from '@clerk/clerk-react';
+import { useUser } from '@clerk/react';
 import { useProgress } from '../../context/ProgressContext';
 import { useNavigate } from 'react-router-dom';
 import {

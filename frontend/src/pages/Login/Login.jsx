@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SignIn, SignUp, useUser } from '@clerk/clerk-react';
+import { SignIn, SignUp, useUser } from '@clerk/react';
 import { Zap, Swords, Trophy, Star } from 'lucide-react';
 import './Login.css';
 
@@ -135,9 +135,9 @@ export default function Login() {
           {/* Clerk embed */}
           <div className="login-clerk-wrap">
             {isSignup ? (
-              <SignUp routing="hash" afterSignUpUrl="/" appearance={clerkAppearance} />
+              <SignUp routing="hash" fallbackRedirectUrl="/" appearance={clerkAppearance} />
             ) : (
-              <SignIn routing="hash" afterSignInUrl="/" appearance={clerkAppearance} />
+              <SignIn routing="hash" fallbackRedirectUrl="/" appearance={clerkAppearance} />
             )}
           </div>
 
