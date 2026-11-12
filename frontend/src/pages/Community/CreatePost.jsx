@@ -3,9 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { ArrowLeft, Code, X, Plus } from 'lucide-react';
 import TagBadge from '../../components/Community/TagBadge';
+import { API_BASE_URL as API } from '../../utils/api';
 import './CreatePost.css';
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 const POST_TYPES = ['QUESTION', 'DISCUSSION', 'SOLUTION'];
 const LANGUAGES = ['javascript', 'python', 'java', 'cpp', 'c', 'typescript', 'go', 'rust', 'kotlin', 'swift'];

@@ -91,7 +91,8 @@ export default function MultiplayerArena() {
     setIsRunning(true);
     setRunResults(null);
     try {
-      const results = await runCode(code, selectedLang, problem.testCases, user?.token);
+      const token = await user?.getToken?.();
+      const results = await runCode(code, selectedLang, problem.testCases, token, problem.id);
       setRunResults(results);
     } catch (err) {
       setRunResults([{ error: err.message }]);
@@ -102,7 +103,8 @@ export default function MultiplayerArena() {
     if (!problem || submitted) return;
     setIsSubmitting(true);
     try {
-      const results = await runCode(code, selectedLang, problem.testCases, user?.token);
+      const token = await user?.getToken?.();
+      const results = await runCode(code, selectedLang, problem.testCases, token, problem.id);
       setRunResults(results);
       setSubmitted(true);
       submitCode(roomId, results);

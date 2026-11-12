@@ -2,9 +2,8 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { MessageSquare, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import VoteButton from './VoteButton';
+import { API_BASE_URL as API } from '../../utils/api';
 import './Community.css';
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 function timeAgo(dateStr, isSession = false) {
   if (isSession) return 'Session comment (not saved)';

@@ -14,9 +14,8 @@ import {
   applyDemoVote,
   addDemoSessionComment,
 } from '../../data/communityDemoData';
+import { API_BASE_URL as API } from '../../utils/api';
 import './PostDetail.css';
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 const POST_TYPE_CONFIG = {
   QUESTION:   { color: '#0284C7', bg: '#EFF6FF', text: 'Question' },

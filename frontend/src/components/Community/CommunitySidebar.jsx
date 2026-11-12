@@ -2,9 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { TrendingUp, Tag, PenSquare, Flame, Hash } from 'lucide-react';
 import TagBadge from './TagBadge';
+import { API_BASE_URL as API } from '../../utils/api';
 import './Community.css';
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 const ALL_TAGS = [
   'Array', 'Graph', 'Dynamic Programming', 'Tree', 'Hash Map',

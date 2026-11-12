@@ -1,17 +1,45 @@
 /**
- * Goblin Defeat Effects: Evil Laugh Sound + Haptic Vibration + Screen Shake
- * Enhanced incorrect-submission experience for Codo2Living.
+ * Goblin Character Audio & Defeat Effects
+ * Uses the user-supplied authentic Goblin reference clip (~3.7s) with strict single-voice
+ * playback management, 2.5s cooldown between reactions, and clean navigation cleanup.
  */
 
-const GOBLIN_SOUND_PATH = '/sounds/goblin-laugh.wav';
-const GOBLIN_VOLUME = 0.55; // Strictly 55% of maximum volume
+const GOBLIN_SOUND_PATH = '/sounds/goblin-laugh.mp3';
+const GOBLIN_REACTION_CLIPS = {
+  laugh: GOBLIN_SOUND_PATH,
+  incorrect: GOBLIN_SOUND_PATH,
+  error: GOBLIN_SOUND_PATH,
+};
+const GOBLIN_VOLUME = 0.68; // Balanced conversational gain for -5.2 dBFS source peak
 const VIBRATION_PATTERN = [100, 50, 150, 50, 200];
 
-// State & Preload references
+// Single-voice playback & cooldown state
 let preloadedAudio = null;
 let currentAudioInstance = null;
+let activeProceduralCleanup = null;
 let lastTriggerTime = 0;
-const TRIGGER_DEBOUNCE_MS = 1400; // Prevent overlapping audio within 1.4s
+export const GOBLIN_COOLDOWN_MS = 2500; // 2.5s cooldown prevents repetitive audio bursts
+
+/**
+ * Resolve effective playback volume in [0, 1], respecting saved user preference when set.
+ */
+function resolveVolume(explicitVolume = GOBLIN_VOLUME) {
+  let vol = explicitVolume;
+  if (typeof window !== 'undefined') {
+    try {
+      const savedVol = localStorage.getItem('codo_sound_volume');
+      if (savedVol !== null && savedVol !== '') {
+        const parsed = Number(savedVol);
+        if (Number.isFinite(parsed)) {
+          vol = parsed;
+        }
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }
+  return Math.max(0, Math.min(1, Number.isFinite(vol) ? vol : GOBLIN_VOLUME));
+}
 
 /**
  * Check if the user has muted sounds
@@ -30,19 +58,57 @@ export function isSoundMuted() {
 }
 
 /**
- * Set user sound mute preference
+ * Set user sound mute preference (stops active voice immediately when muted)
  */
 export function setSoundMuted(muted) {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem('codo_sound_muted', muted ? 'true' : 'false');
+    if (muted) {
+      stopGoblinVoice();
+    }
   } catch {
     // ignore
   }
 }
 
 /**
- * Preload the Goblin laugh audio asset to minimize playback delay
+ * Immediately stop any currently playing Goblin audio (HTML5 or Web Audio fallback)
+ */
+export function stopGoblinVoice() {
+  if (currentAudioInstance) {
+    try {
+      currentAudioInstance.onended = null;
+      currentAudioInstance.onerror = null;
+      currentAudioInstance.pause();
+      currentAudioInstance.currentTime = 0;
+    } catch {
+      // ignore
+    }
+    currentAudioInstance = null;
+  }
+
+  if (activeProceduralCleanup) {
+    try {
+      activeProceduralCleanup();
+    } catch {
+      // ignore
+    }
+    activeProceduralCleanup = null;
+  }
+}
+
+/**
+ * Reset internal trigger timing and cached element (for tests or hard reset)
+ */
+export function resetGoblinAudioState() {
+  stopGoblinVoice();
+  preloadedAudio = null;
+  lastTriggerTime = 0;
+}
+
+/**
+ * Preload the authentic Goblin reference audio to minimize playback delay
  */
 export function preloadGoblinAudio() {
   if (typeof window === 'undefined' || typeof Audio === 'undefined') return;
@@ -50,8 +116,7 @@ export function preloadGoblinAudio() {
     try {
       preloadedAudio = new Audio(GOBLIN_SOUND_PATH);
       preloadedAudio.preload = 'auto';
-      preloadedAudio.volume = GOBLIN_VOLUME;
-      // Preload trigger
+      preloadedAudio.volume = resolveVolume(GOBLIN_VOLUME);
       preloadedAudio.load();
     } catch (e) {
       console.warn('Goblin audio preload failed:', e);
@@ -59,18 +124,17 @@ export function preloadGoblinAudio() {
   }
 }
 
-// Automatically preload on module import in browser
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && typeof document !== 'undefined') {
   if (document.readyState === 'complete' || document.readyState === 'interactive') {
     preloadGoblinAudio();
   } else {
     window.addEventListener('DOMContentLoaded', preloadGoblinAudio, { once: true });
   }
+  window.addEventListener('pagehide', stopGoblinVoice);
 }
 
 /**
  * Play device haptic vibration where supported
- * Pattern: [100, 50, 150, 50, 200]
  */
 export function triggerFailureVibration(pattern = VIBRATION_PATTERN) {
   if (
@@ -81,144 +145,191 @@ export function triggerFailureVibration(pattern = VIBRATION_PATTERN) {
     try {
       navigator.vibrate(pattern);
     } catch {
-      // Gracefully handle browsers/devices without vibration or permission blocks
+      // ignore
     }
   }
 }
 
 /**
- * Web Audio API procedural synthesizer fallback
- * Plays an evil high-pitched goblin cackle at 55% volume if audio file is blocked
+ * Clean, dry Web Audio fallback strictly used only if HTML5 Audio is blocked by browser policy.
+ * Zero delay, zero reverb, zero distortion.
  */
-function playProceduralGoblinLaugh(volume = GOBLIN_VOLUME) {
+function playProceduralFallback(volume = GOBLIN_VOLUME) {
   if (typeof window === 'undefined') return;
   try {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtx) return;
+
     const ctx = new AudioCtx();
-    if (ctx.state === 'suspended') {
+    if (typeof ctx.resume === 'function' && ctx.state === 'suspended') {
       ctx.resume().catch(() => {});
     }
 
+    const safeVol = resolveVolume(volume);
     const masterGain = ctx.createGain();
-    masterGain.gain.setValueAtTime(volume, ctx.currentTime);
+    masterGain.gain.setValueAtTime(safeVol * 0.65, ctx.currentTime);
     masterGain.connect(ctx.destination);
 
-    // Goblin Laugh Pulses
-    const pulses = [
-      { t: 0.05, dur: 0.14, pitch: 420, endPitch: 460 },
-      { t: 0.23, dur: 0.16, pitch: 470, endPitch: 530 },
-      { t: 0.44, dur: 0.19, pitch: 560, endPitch: 630 },
-      { t: 0.69, dur: 0.22, pitch: 640, endPitch: 580 },
-      { t: 0.96, dur: 0.22, pitch: 590, endPitch: 510 },
-      { t: 1.24, dur: 0.21, pitch: 520, endPitch: 430 },
-      { t: 1.50, dur: 0.45, pitch: 450, endPitch: 280 },
+    const warmthFilter = ctx.createBiquadFilter();
+    warmthFilter.type = 'lowpass';
+    warmthFilter.frequency.setValueAtTime(1850, ctx.currentTime);
+    warmthFilter.Q.setValueAtTime(0.7, ctx.currentTime);
+    warmthFilter.connect(masterGain);
+
+    const syllables = [
+      { t: 0.03, dur: 0.13, pitch: 210, endPitch: 245, amp: 0.55 },
+      { t: 0.20, dur: 0.14, pitch: 225, endPitch: 265, amp: 0.68 },
+      { t: 0.39, dur: 0.16, pitch: 242, endPitch: 278, amp: 0.75 },
+      { t: 0.60, dur: 0.28, pitch: 246, endPitch: 185, amp: 0.60 },
     ];
 
-    pulses.forEach(p => {
-      const startTime = ctx.currentTime + p.t;
-      const osc = ctx.createOscillator();
-      const growlOsc = ctx.createOscillator();
-      const growlGain = ctx.createGain();
-      const pulseGain = ctx.createGain();
-      const filter = ctx.createBiquadFilter();
+    const activeOscillators = [];
 
-      // Formant Bandpass Filter (goblin throat nasality)
-      filter.type = 'bandpass';
-      filter.frequency.setValueAtTime(1400, startTime);
-      filter.Q.setValueAtTime(3.5, startTime);
+    syllables.forEach((s) => {
+      const startTime = ctx.currentTime + s.t;
+      const primaryOsc = ctx.createOscillator();
+      const chestOsc = ctx.createOscillator();
+      const syllableGain = ctx.createGain();
+      const chestGain = ctx.createGain();
 
-      // Pitch sweep
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(p.pitch, startTime);
-      osc.frequency.exponentialRampToValueAtTime(Math.max(100, p.endPitch), startTime + p.dur);
+      primaryOsc.type = 'triangle';
+      primaryOsc.frequency.setValueAtTime(s.pitch, startTime);
+      primaryOsc.frequency.exponentialRampToValueAtTime(
+        Math.max(120, s.endPitch),
+        startTime + s.dur
+      );
 
-      // Throat Growl FM (raspy villain undertone)
-      growlOsc.type = 'sine';
-      growlOsc.frequency.setValueAtTime(32, startTime);
-      growlGain.gain.setValueAtTime(p.pitch * 0.15, startTime);
-      growlOsc.connect(growlGain);
-      growlGain.connect(osc.frequency);
+      chestOsc.type = 'sine';
+      chestOsc.frequency.setValueAtTime(s.pitch, startTime);
+      chestOsc.frequency.exponentialRampToValueAtTime(
+        Math.max(120, s.endPitch),
+        startTime + s.dur
+      );
+      chestGain.gain.setValueAtTime(0.35, startTime);
 
-      // Amplitude envelope
-      pulseGain.gain.setValueAtTime(0.001, startTime);
-      pulseGain.gain.linearRampToValueAtTime(0.7, startTime + 0.03);
-      pulseGain.gain.exponentialRampToValueAtTime(0.001, startTime + p.dur);
+      syllableGain.gain.setValueAtTime(0.0001, startTime);
+      syllableGain.gain.linearRampToValueAtTime(s.amp * 0.45, startTime + s.dur * 0.25);
+      syllableGain.gain.exponentialRampToValueAtTime(0.0001, startTime + s.dur);
 
-      osc.connect(filter);
-      filter.connect(pulseGain);
-      pulseGain.connect(masterGain);
+      primaryOsc.connect(syllableGain);
+      chestOsc.connect(chestGain);
+      chestGain.connect(syllableGain);
+      syllableGain.connect(warmthFilter);
 
-      growlOsc.start(startTime);
-      osc.start(startTime);
-      growlOsc.stop(startTime + p.dur);
-      osc.stop(startTime + p.dur);
+      primaryOsc.start(startTime);
+      chestOsc.start(startTime);
+      primaryOsc.stop(startTime + s.dur + 0.01);
+      chestOsc.stop(startTime + s.dur + 0.01);
+
+      activeOscillators.push(primaryOsc, chestOsc);
     });
 
-    setTimeout(() => {
-      ctx.close().catch(() => {});
-    }, 2400);
+    let closed = false;
+    const cleanupTimer = setTimeout(() => {
+      if (closed) return;
+      closed = true;
+      activeProceduralCleanup = null;
+      ctx.close?.().catch(() => {});
+    }, 1050);
+
+    activeProceduralCleanup = () => {
+      if (closed) return;
+      closed = true;
+      clearTimeout(cleanupTimer);
+      try {
+        masterGain.gain.cancelScheduledValues(ctx.currentTime);
+        masterGain.gain.setValueAtTime(masterGain.gain.value, ctx.currentTime);
+        masterGain.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + 0.02);
+      } catch {
+        // ignore teardown ramp errors
+      }
+      activeOscillators.forEach((osc) => {
+        try {
+          osc.stop(ctx.currentTime + 0.025);
+        } catch {
+          // already stopped
+        }
+      });
+      setTimeout(() => {
+        ctx.close?.().catch(() => {});
+      }, 35);
+    };
   } catch (err) {
-    console.warn('Procedural goblin laugh failed:', err);
+    console.warn('Procedural goblin fallback failed:', err);
   }
 }
 
 /**
- * Play the Goblin evil laugh sound at 55% volume
- * Handles preloaded audio, browser autoplay, single instance, and cleanup
+ * Play a Goblin voice reaction clip respecting mute, single-voice playback, and 2.5s cooldown.
  */
-export function playGoblinLaugh(volume = GOBLIN_VOLUME) {
-  if (isSoundMuted()) return;
+export function playGoblinReaction(reactionType = 'laugh', options = {}) {
+  if (isSoundMuted()) return false;
 
-  const now = Date.now();
-  if (now - lastTriggerTime < TRIGGER_DEBOUNCE_MS) {
-    return; // Prevent rapid overlapping cacophony
+  const clipPath = GOBLIN_REACTION_CLIPS[reactionType];
+  if (!clipPath) return false;
+
+  const { now = Date.now(), force = false, volume = GOBLIN_VOLUME } = options;
+  if (!force && now - lastTriggerTime < GOBLIN_COOLDOWN_MS) {
+    return false;
   }
   lastTriggerTime = now;
 
-  try {
-    // Stop any existing instance
-    if (currentAudioInstance) {
-      try {
-        currentAudioInstance.pause();
-        currentAudioInstance.currentTime = 0;
-      } catch {
-        // ignore
-      }
-      currentAudioInstance = null;
-    }
+  // Prevent overlap: halt any active clip cleanly before starting the new clip
+  stopGoblinVoice();
 
-    // Reuse preloaded audio or create fresh element
-    const audio = preloadedAudio || new Audio(GOBLIN_SOUND_PATH);
-    audio.volume = Math.max(0, Math.min(1, volume)); // strictly 0.55
+  const effectiveVol = resolveVolume(volume);
+
+  try {
+    const canReusePreloaded = preloadedAudio && preloadedAudio.src?.endsWith(clipPath);
+    const audio = canReusePreloaded ? preloadedAudio : new Audio(clipPath);
+    if (clipPath === GOBLIN_SOUND_PATH) {
+      preloadedAudio = audio;
+    }
+    audio.volume = effectiveVol;
     audio.currentTime = 0;
     currentAudioInstance = audio;
-
-    const playPromise = audio.play();
-    if (playPromise !== undefined) {
-      playPromise.catch(err => {
-        // If HTML5 audio playback was blocked by browser policy, fallback to Web Audio
-        console.info('HTML5 audio blocked by browser policy, attempting Web Audio synthesis fallback...');
-        playProceduralGoblinLaugh(volume);
-      });
-    }
 
     audio.onended = () => {
       if (currentAudioInstance === audio) {
         currentAudioInstance = null;
       }
     };
+
+    audio.onerror = () => {
+      if (currentAudioInstance === audio) {
+        currentAudioInstance = null;
+      }
+      playProceduralFallback(effectiveVol);
+    };
+
+    const playPromise = audio.play();
+    if (playPromise && typeof playPromise.catch === 'function') {
+      playPromise.catch(() => {
+        if (currentAudioInstance === audio) {
+          currentAudioInstance = null;
+        }
+        playProceduralFallback(effectiveVol);
+      });
+    }
+    return true;
   } catch {
-    // Fallback if Audio constructor fails
-    playProceduralGoblinLaugh(volume);
+    playProceduralFallback(effectiveVol);
+    return true;
   }
 }
 
 /**
- * Trigger Screen Shake effect using GSAP if present, or CSS fallback
+ * Convenience alias for Goblin failure/mistake laugh reaction.
+ */
+export function playGoblinLaugh(volume = GOBLIN_VOLUME, options = {}) {
+  return playGoblinReaction('laugh', { ...options, volume });
+}
+
+/**
+ * Trigger Screen Shake effect using GSAP if present, or Web Animations API fallback
  */
 export function triggerScreenShakeEffect(targetSelector = '.battle-arena') {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
   const target =
     document.querySelector(targetSelector) ||
     document.querySelector('.battle-arena') ||
@@ -240,7 +351,7 @@ export function triggerScreenShakeEffect(targetSelector = '.battle-arena') {
         onComplete: () => window.gsap.set(target, { x: 0 }),
       }
     );
-  } else {
+  } else if (typeof target.animate === 'function') {
     target.animate(
       [
         { transform: 'translateX(0px)' },
@@ -257,12 +368,9 @@ export function triggerScreenShakeEffect(targetSelector = '.battle-arena') {
 
 /**
  * Combined Goblin Defeat Sequence:
- * Simultaneously executes:
  * 1. Screen shake animation
- * 2. Device vibration ([100, 50, 150, 50, 200])
- * 3. Goblin evil laugh sound at 55% volume
- *
- * ONLY to be called upon authoritative incorrect submission (test cases failed).
+ * 2. Device haptic vibration
+ * 3. Authentic Goblin laugh clip (with 2.5s cooldown & anti-overlap)
  */
 export function triggerGoblinDefeatEffects(options = {}) {
   const {
@@ -270,9 +378,9 @@ export function triggerGoblinDefeatEffects(options = {}) {
     customScreenShake = null,
     volume = GOBLIN_VOLUME,
     vibrationPattern = VIBRATION_PATTERN,
+    reactionType = 'laugh',
   } = options;
 
-  // 1. Screen Shake
   if (typeof customScreenShake === 'function') {
     try {
       customScreenShake();
@@ -283,10 +391,6 @@ export function triggerGoblinDefeatEffects(options = {}) {
     triggerScreenShakeEffect(targetSelector);
   }
 
-  // 2. Device Vibration
   triggerFailureVibration(vibrationPattern);
-
-  // 3. Goblin Evil Laugh Audio at 55% Volume
-  playGoblinLaugh(volume);
+  playGoblinReaction(reactionType, { volume });
 }
-

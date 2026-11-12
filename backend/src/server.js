@@ -10,9 +10,11 @@ const shopRoutes = require('./routes/shopRoutes');
 const inventoryRoutes = require('./routes/inventoryRoutes');
 const progressRoutes = require('./routes/progressRoutes');
 const geminiRoutes = require('./routes/geminiRoutes');
+const executeRoutes = require('./routes/executeRoutes');
 const communityRoutes = require('./routes/communityRoutes');
 const battleGroundRoutes = require('./routes/battleGroundRoutes');
 const setupMultiplayer = require('./socket/multiplayerHandler');
+const supabase = require('./utils/supabase');
 
 const {
   parseAllowedOrigins,
@@ -57,13 +59,25 @@ app.use('/api/user', userRoutes);
 app.use('/api/shop', shopRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/progress', progressRoutes);
+app.use('/api/execute', executeRoutes);
 app.use('/api/evaluate', geminiRoutes);
 app.use('/api/community', communityRoutes);
 app.use('/api/battleground', battleGroundRoutes);
 
-// Health check
-app.get(['/api', '/api/health'], (req, res) => {
+// Health checks
+app.get('/api', (req, res) => {
   res.send('Codo Leveling API is running (Supabase + Clerk)');
+});
+
+app.get('/api/health', async (req, res) => {
+  const supabaseHealth = await supabase.checkSupabaseHealth();
+  const statusCode = supabaseHealth.connected ? 200 : (supabaseHealth.configured ? 503 : 200);
+  res.status(statusCode).json({
+    status: supabaseHealth.connected ? 'healthy' : (supabaseHealth.configured ? 'degraded' : 'unconfigured'),
+    service: 'codo-champ-backend',
+    timestamp: new Date().toISOString(),
+    supabase: supabaseHealth,
+  });
 });
 
 // ─── 4. Global Error Handler ──────────────────────────────────────────────────

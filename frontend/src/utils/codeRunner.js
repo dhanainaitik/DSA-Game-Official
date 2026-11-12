@@ -1,24 +1,28 @@
 /**
- * Advanced Code Execution Engine for Codo Leveling.
- * Supports Local JavaScript sandboxing and Backend Multi-language execution.
+ * Advanced Multi-Language Code Execution Engine for Codo Champ.
+ * Supports Local JavaScript sandboxing and Native Backend Multi-language execution (C++, C, JS).
  */
+
+import { apiUrl } from './api';
 
 /**
  * Normalizes output and expected values for comparison.
  */
-function normalize(val) {
+export function normalize(val) {
   if (val === null || val === undefined) return String(val).toLowerCase(); // 'null' or 'undefined'
   
   if (typeof val === 'string') {
+    const trimmed = val.trim();
+    if (trimmed === 'true' || trimmed === 'false') return trimmed;
     try {
-      const parsed = JSON.parse(val);
+      const parsed = JSON.parse(trimmed);
       if (typeof parsed === 'object' || Array.isArray(parsed)) {
         return JSON.stringify(parsed);
       }
+      return String(parsed);
     } catch {
-      // Not valid JSON
+      return trimmed;
     }
-    return val;
   }
   
   if (Array.isArray(val) || typeof val === 'object') return JSON.stringify(val);
@@ -45,6 +49,8 @@ function runJSLocally(userCode, testCases) {
         } catch {
           args = [tc.input];
         }
+      } else if (Array.isArray(tc.input)) {
+        args = [tc.input];
       } else {
         args = [tc.input];
       }
@@ -64,7 +70,7 @@ function runJSLocally(userCode, testCases) {
       const actual = normalize(actualRaw);
 
       results.push({
-        input: JSON.stringify(tc.input),
+        input: typeof tc.input === 'string' ? tc.input : JSON.stringify(tc.input),
         expected,
         actual,
         passed: actual === expected,
@@ -72,7 +78,7 @@ function runJSLocally(userCode, testCases) {
       });
     } catch (err) {
       results.push({
-        input: JSON.stringify(tc.input),
+        input: typeof tc.input === 'string' ? tc.input : JSON.stringify(tc.input),
         expected: normalize(tc.expected),
         actual: 'Execution Error',
         passed: false,
@@ -86,45 +92,66 @@ function runJSLocally(userCode, testCases) {
 
 /**
  * Main entry point for running code (RUN mode).
+ * Sends C, C++ and remote workloads to backend execution service.
  */
-export async function runCode(userCode, language, testCases, userToken = null) {
-  if (language === 'javascript') {
+export async function runCode(userCode, language, testCases, userToken = null, problemId = null) {
+  const normalizedLang = (language || '').toLowerCase().trim();
+
+  // If JavaScript and testCases are standard, run locally for instant feedback
+  if (normalizedLang === 'javascript') {
     return runJSLocally(userCode, testCases);
   }
 
-  // For non-JS languages, we use the backend bridge
+  // For C++ and C, invoke backend compiler execution endpoint
   try {
-    const response = await fetch('/api/evaluate', {
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+    if (userToken) {
+      headers['Authorization'] = `Bearer ${userToken}`;
+    }
+
+    const response = await fetch(apiUrl('/api/execute'), {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${userToken}`
-      },
+      headers,
       body: JSON.stringify({
         code: userCode,
-        language,
-        context: {
-          title: 'Remote Execution',
-          description: 'Executing test cases via backend bridge.',
-          testCases
-        },
-        mode: 'run' // Signal to backend to focus on execution
+        language: normalizedLang,
+        problemId: problemId || null,
+        testCases,
+        mode: 'run',
       }),
     });
 
-    if (!response.ok) throw new Error('Remote execution failed');
-    const evaluation = await response.json();
-    
-    // Convert backend evaluation to expected result format
-    return evaluation.results || testCases.map(tc => ({
-       input: JSON.stringify(tc.input),
-       expected: normalize(tc.expected),
-       actual: evaluation.passed ? normalize(tc.expected) : 'Failed',
-       passed: evaluation.passed
-    }));
+    const data = await response.json();
+
+    if (!response.ok) {
+      const errMsg = data.error || 'Execution failed on server';
+      return [{ error: errMsg, passed: false }];
+    }
+
+    if (data.compileError) {
+      return [{
+        error: data.compileError,
+        compileError: data.compileError,
+        actual: 'Compilation Error',
+        expected: 'Successful compilation',
+        passed: false,
+      }];
+    }
+
+    // Return genuine execution results from compiler
+    if (Array.isArray(data.results) && data.results.length > 0) {
+      return data.results;
+    }
+
+    return [{
+      error: data.runtimeError || 'No test case results produced',
+      passed: false,
+    }];
   } catch (err) {
     console.error('Remote Runner Error:', err);
-    return [{ error: 'Remote engine unavailable' }];
+    return [{ error: 'Remote compiler unavailable: ' + err.message, passed: false }];
   }
 }

@@ -18,6 +18,7 @@ import { useProgress } from '../../context/ProgressContext';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { runCode } from '../../utils/codeRunner';
+import { apiUrl } from '../../utils/api';
 import { triggerGoblinDefeatEffects, preloadGoblinAudio } from '../../utils/goblinEffects';
 import { diagnoseSubmissionForCodoGuide, runStaticDiagnostics } from '../../utils/codoGuideAnalyzer';
 import gsap from 'gsap';
@@ -390,9 +391,9 @@ export default function Question() {
     setAttempts(a => a + 1);
 
     try {
-      // runCode is now async and handles remote execution for non-JS languages
-      const token = await user?.getToken();
-      const results = await runCode(code, selectedLang, testCases, token);
+      // runCode supports local JavaScript and backend execution for C++ and C
+      const token = await user?.getToken?.();
+      const results = await runCode(code, selectedLang, testCases, token, problemId);
       setRunResults(results);
       setPanelOpen(true);
       
@@ -414,7 +415,7 @@ export default function Question() {
     } catch (err) {
       console.error(err);
       showCombatText('ENGINE ERROR', 'enemy-hit');
-      setRunResults([{ error: err.message }]);
+      setRunResults([{ error: err.message, passed: false }]);
       const diag = diagnoseSubmissionForCodoGuide({
         code,
         language: selectedLang,
@@ -440,47 +441,49 @@ export default function Question() {
 
       if (user) {
         try {
-          token = await user.getToken();
+          token = await user.getToken?.();
         } catch {
           // ignore token fetch error
         }
       }
 
-      if (token) {
-        try {
-          const response = await fetch('/api/evaluate', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              code,
-              language: selectedLang,
-              context: {
-                title: problem.title,
-                description: problem.mission,
-                testCases: problem.testCases
-              }
-            }),
-          });
+      // 1. Submit to backend multi-language execution endpoint
+      try {
+        const headers = {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
 
-          if (response.ok) {
-            const apiJson = await response.json();
-            if (Array.isArray(apiJson.results) && apiJson.results.length > 0) {
-              result = apiJson;
-            }
-          }
-        } catch (fetchErr) {
-          console.warn('API evaluate failed, falling back to local runner:', fetchErr);
+        const response = await fetch(apiUrl('/api/execute'), {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            code,
+            language: selectedLang,
+            problemId,
+            testCases: problem.testCases,
+            mode: 'submit',
+          }),
+        });
+
+        const apiJson = await response.json();
+        if (response.ok) {
+          result = apiJson;
+        } else {
+          result = {
+            results: [],
+            passed: false,
+            feedback: apiJson.error || 'Server rejected submission.',
+            details: apiJson.error || 'Execution could not be completed.',
+            complexity: { time: 'N/A', space: 'N/A' },
+          };
         }
-      }
-
-      // If remote evaluate wasn't used or returned empty results, run locally
-      if (!result) {
+      } catch (fetchErr) {
+        console.warn('API execute failed:', fetchErr);
+        // Only if JavaScript was selected do we allow local evaluation fallback
         if (selectedLang === 'javascript') {
-          const localResults = await runCode(code, selectedLang, testCases, token);
+          const localResults = await runCode(code, selectedLang, testCases, token, problemId);
           const allPassed = Array.isArray(localResults) && localResults.length > 0 && localResults.every(r => r.passed);
           result = {
             results: localResults,
@@ -501,15 +504,23 @@ export default function Question() {
             feedback: staticCheck ? staticCheck.message : 'Unable to connect to remote compiler.',
             details: staticCheck
               ? (staticCheck.nextStep || 'Fix the issue shown above and try again.')
-              : 'No local runtime for this language right now. Switch to JavaScript or verify API connectivity.',
+              : 'Unable to connect to the backend compiler service. Verify connectivity.',
             complexity: { time: 'N/A', space: 'N/A' },
           };
         }
       }
 
+      // If compilation error occurred in C++ or C, set clear feedback and zero results
+      if (result.compileError) {
+        result.passed = false;
+        result.results = [];
+        result.feedback = 'Compilation Error';
+        result.details = result.compileError;
+      }
+
       setSubmitResult({ 
         results: result.results || [], 
-        allPassed: result.passed 
+        allPassed: Boolean(result.passed) 
       });
       setAiFeedback(result);
       setPanelOpen(true);

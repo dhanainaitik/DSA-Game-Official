@@ -11,9 +11,9 @@ import {
   applyDemoVote,
   isDemoPostId,
 } from '../../data/communityDemoData';
+import { API_BASE_URL as API } from '../../utils/api';
 import './Community.css';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 const PAGE_SIZE = 12;
 
 const POST_TYPES = ['All', 'Question', 'Discussion', 'Solution'];

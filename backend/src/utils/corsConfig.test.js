@@ -143,7 +143,11 @@ test('server.js HTTP API, error handler, and Socket.IO enforce ALLOWED_ORIGINS c
 
     const healthRes = await dispatchToServer(server, '/api/health');
     assert.equal(healthRes.status, 200);
-    assert.equal(healthRes.body, 'Codo Leveling API is running (Supabase + Clerk)');
+    const parsedHealth = JSON.parse(healthRes.body);
+    assert.equal(parsedHealth.service, 'codo-champ-backend');
+    assert.ok(parsedHealth.supabase);
+    assert.equal(typeof parsedHealth.supabase.configured, 'boolean');
+    assert.equal(typeof parsedHealth.supabase.connected, 'boolean');
 
     // Allowed preview Vercel origin (normalized trailing slash from env)
     const previewRes = await dispatchToServer(server, '/api', { origin: 'https://preview-123-app.vercel.app' });

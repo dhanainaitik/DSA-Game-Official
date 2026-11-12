@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { STATES } from '../data/problems';
 import { ITEMS } from '../data/items';
 import { useAuth } from './AuthContext';
+import { apiUrl } from '../utils/api';
 
 const ProgressContext = createContext(null);
 
@@ -64,7 +65,7 @@ export function ProgressProvider({ children }) {
       try {
         const token = await user.getToken();
         if (!token) return;
-        const res = await fetch('/api/battleground/stats', {
+        const res = await fetch(apiUrl('/api/battleground/stats'), {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {
@@ -101,7 +102,7 @@ export function ProgressProvider({ children }) {
       if (!token) return;
 
       try {
-        await fetch(`/api/progress/${user.id}/sync`, {
+        await fetch(apiUrl(`/api/progress/${user.id}/sync`), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
