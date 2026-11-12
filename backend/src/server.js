@@ -14,31 +14,28 @@ const communityRoutes = require('./routes/communityRoutes');
 const battleGroundRoutes = require('./routes/battleGroundRoutes');
 const setupMultiplayer = require('./socket/multiplayerHandler');
 
+const {
+  parseAllowedOrigins,
+  createCorsOriginValidator,
+  applyCorsHeaders,
+} = require('./utils/corsConfig');
+
+const ALLOWED_ORIGINS = parseAllowedOrigins(process.env.ALLOWED_ORIGINS);
+const validateCorsOrigin = createCorsOriginValidator(ALLOWED_ORIGINS);
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: '*',
+    origin: validateCorsOrigin,
     methods: ['GET', 'POST'],
+    credentials: true,
   },
 });
 
 // ─── 1. CORS — first so every response (including errors) carries headers ─────
-const ALLOWED_ORIGINS = [
-  'http://localhost:5174',
-  'http://localhost:5173',
-  'http://localhost:3000',
-];
-
 const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow no-origin requests (curl, Postman, server-to-server)
-    if (!origin || ALLOWED_ORIGINS.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: validateCorsOrigin,
   methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
@@ -65,7 +62,7 @@ app.use('/api/community', communityRoutes);
 app.use('/api/battleground', battleGroundRoutes);
 
 // Health check
-app.get('/api', (req, res) => {
+app.get(['/api', '/api/health'], (req, res) => {
   res.send('Codo Leveling API is running (Supabase + Clerk)');
 });
 
@@ -73,12 +70,8 @@ app.get('/api', (req, res) => {
 app.use((err, req, res, next) => {
   console.error('Unhandled Error:', err);
 
-  // Re-apply CORS so the browser can read error response bodies
-  const origin = req.headers.origin;
-  if (!origin || ALLOWED_ORIGINS.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin || '*');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-  }
+  // Re-apply validated CORS headers so allowed browser origins can read error responses
+  applyCorsHeaders(res, req.headers.origin, ALLOWED_ORIGINS);
 
   if (res.headersSent) return next(err);
 
@@ -93,6 +86,10 @@ app.use((err, req, res, next) => {
 setupMultiplayer(io);
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+if (require.main === module) {
+  server.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+  });
+}
+
+module.exports = { app, server, io, ALLOWED_ORIGINS };
