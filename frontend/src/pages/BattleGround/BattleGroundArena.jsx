@@ -5,7 +5,7 @@ import CodeMirror from '@uiw/react-codemirror';
 import { javascript } from '@codemirror/lang-javascript';
 import { python } from '@codemirror/lang-python';
 import { java } from '@codemirror/lang-java';
-import { cpp } from '@codemirror/lang-cpp';
+import { cppLanguageSupport, cLanguageSupport } from '../../utils/cppAutocomplete';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Send, ArrowLeft, Lightbulb, CheckCircle2, XCircle, Flame, Trophy, Crown, Sparkles, Skull } from 'lucide-react';
@@ -157,8 +157,8 @@ export default function BattleGroundArena() {
     switch (selectedLang) {
       case 'python': return [python()];
       case 'java':   return [java()];
-      case 'cpp':    return [cpp()];
-      case 'c':      return [cpp()];
+      case 'cpp':    return [cppLanguageSupport()];
+      case 'c':      return [cLanguageSupport()];
       default:       return [javascript()];
     }
   };
