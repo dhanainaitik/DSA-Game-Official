@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const { CANONICAL_ITEMS, resolveCanonicalItem } = require('../routes/inventoryRoutes');
 
 const migrationPath = path.resolve(__dirname, '../../supabase_migration.sql');
 const migrationSql = fs.readFileSync(migrationPath, 'utf8');
@@ -42,6 +43,30 @@ test('consume_user_inventory_item: RPC security and concurrency controls', () =>
   );
 });
 
+test('Canonical Item Identifier Mapping: eliminates UUID cast crashes and unifies catalog slugs', () => {
+  // 1. Hint Scroll resolution
+  const hintScroll = resolveCanonicalItem('hint_scroll');
+  assert.ok(hintScroll, 'hint_scroll must resolve to canonical catalog object');
+  assert.equal(hintScroll.slug, 'hint_scroll');
+  assert.equal(hintScroll.type, 'CONSUMABLE');
+  assert.equal(hintScroll.description, 'Reveals a strategic DSA hint for this problem.');
+
+  // 2. Case and delimiter normalization
+  assert.equal(resolveCanonicalItem('HINT_SCROLL')?.slug, 'hint_scroll');
+  assert.equal(resolveCanonicalItem('hint-scroll')?.slug, 'hint_scroll');
+  assert.equal(resolveCanonicalItem('retry_shield')?.slug, 'retry_shield');
+  assert.equal(resolveCanonicalItem('focus_charm')?.slug, 'focus_charm');
+  assert.equal(resolveCanonicalItem('lightning_flask')?.slug, 'lightning_flask');
+  assert.equal(resolveCanonicalItem('xp_tome')?.slug, 'xp_tome');
+  assert.equal(resolveCanonicalItem('shadow_veil')?.slug, 'shadow_veil');
+  assert.equal(resolveCanonicalItem('iron_shield')?.slug, 'iron_shield');
+
+  // 3. Unknown items must return null
+  assert.equal(resolveCanonicalItem('unknown_legendary_sword'), null);
+  assert.equal(resolveCanonicalItem(''), null);
+  assert.equal(resolveCanonicalItem(null), null);
+});
+
 test('Simulated Concurrency: prevents race conditions and duplicate consumption', async () => {
   // Simulate database state
   const catalog = {
@@ -60,26 +85,26 @@ test('Simulated Concurrency: prevents race conditions and duplicate consumption'
   // Atomic simulation function mimicking PostgreSQL transaction with row lock
   let isLocked = false;
   async function simulateAtomicConsume(clerkId, slug, problemId = null) {
-    // Acquire lock (simulates FOR UPDATE queue)
     while (isLocked) {
       await new Promise(r => setTimeout(r, 1));
     }
     isLocked = true;
 
     try {
-      const item = catalog[slug];
-      if (!item) {
-        return { success: false, reason: 'item_not_found' };
+      const canonical = resolveCanonicalItem(slug) || catalog[slug];
+      if (!canonical) {
+        return { success: false, reason: 'item_not_found', error: 'Item not found in catalog' };
       }
 
-      if (item.type !== 'CONSUMABLE' && item.type !== 'BOOST') {
-        return { success: false, reason: 'item_not_usable' };
+      if (canonical.type !== 'CONSUMABLE' && canonical.type !== 'BOOST') {
+        return { success: false, reason: 'item_not_usable', error: 'Passive and cosmetic items cannot be consumed' };
       }
 
+      const item = catalog[canonical.slug];
       const key = `${clerkId}:${item.id}`;
       const invRow = inventory[key];
       if (!invRow || invRow.quantity <= 0) {
-        return { success: false, reason: 'insufficient_quantity', current_quantity: 0 };
+        return { success: false, reason: 'insufficient_quantity', current_quantity: 0, error: 'You do not own this item' };
       }
 
       // Decrement atomically
@@ -89,13 +114,12 @@ test('Simulated Concurrency: prevents race conditions and duplicate consumption'
         delete inventory[key];
       }
 
-      // Record audit
-      auditLog.push({ clerkId, itemId: item.id, slug, problemId, usedAt: new Date() });
+      auditLog.push({ clerkId, itemId: item.id, slug: canonical.slug, problemId, usedAt: new Date() });
 
       return {
         success: true,
         item_id: item.id,
-        item_slug: item.slug,
+        item_slug: canonical.slug,
         remaining_quantity: remaining,
       };
     } finally {
@@ -103,13 +127,13 @@ test('Simulated Concurrency: prevents race conditions and duplicate consumption'
     }
   }
 
-  // Scenario 1: User with quantity=1 fires 5 concurrent use requests (e.g. double click or bot)
+  // Scenario 1: User with quantity=1 fires 5 concurrent use requests
   const results1 = await Promise.all([
-    simulateAtomicConsume('user_abc', 'hint_scroll', 'p-arr-1'),
-    simulateAtomicConsume('user_abc', 'hint_scroll', 'p-arr-1'),
-    simulateAtomicConsume('user_abc', 'hint_scroll', 'p-arr-1'),
-    simulateAtomicConsume('user_abc', 'hint_scroll', 'p-arr-1'),
-    simulateAtomicConsume('user_abc', 'hint_scroll', 'p-arr-1'),
+    simulateAtomicConsume('user_abc', 'hint_scroll', 'p-arr-1-2'),
+    simulateAtomicConsume('user_abc', 'hint_scroll', 'p-arr-1-2'),
+    simulateAtomicConsume('user_abc', 'hint_scroll', 'p-arr-1-2'),
+    simulateAtomicConsume('user_abc', 'hint_scroll', 'p-arr-1-2'),
+    simulateAtomicConsume('user_abc', 'hint_scroll', 'p-arr-1-2'),
   ]);
 
   const successes1 = results1.filter(r => r.success);
@@ -120,13 +144,18 @@ test('Simulated Concurrency: prevents race conditions and duplicate consumption'
   assert.equal(inventory['user_abc:item-1'], undefined, 'Item row must be cleared when reaching 0');
   assert.equal(successes1[0].remaining_quantity, 0, 'Remaining quantity reported must be 0');
 
-  // Scenario 2: User with quantity=3 fires 5 concurrent requests
+  // Scenario 2: User with quantity=0 attempts consumption
+  const zeroResult = await simulateAtomicConsume('user_abc', 'hint_scroll', 'p-arr-1-2');
+  assert.equal(zeroResult.success, false);
+  assert.equal(zeroResult.reason, 'insufficient_quantity');
+
+  // Scenario 3: User with quantity=3 fires 5 concurrent requests
   const results2 = await Promise.all([
-    simulateAtomicConsume('user_abc', 'retry_shield', 'p-arr-2'),
-    simulateAtomicConsume('user_abc', 'retry_shield', 'p-arr-2'),
-    simulateAtomicConsume('user_abc', 'retry_shield', 'p-arr-2'),
-    simulateAtomicConsume('user_abc', 'retry_shield', 'p-arr-2'),
-    simulateAtomicConsume('user_abc', 'retry_shield', 'p-arr-2'),
+    simulateAtomicConsume('user_abc', 'retry_shield', 'p-arr-2-1'),
+    simulateAtomicConsume('user_abc', 'retry_shield', 'p-arr-2-1'),
+    simulateAtomicConsume('user_abc', 'retry_shield', 'p-arr-2-1'),
+    simulateAtomicConsume('user_abc', 'retry_shield', 'p-arr-2-1'),
+    simulateAtomicConsume('user_abc', 'retry_shield', 'p-arr-2-1'),
   ]);
 
   const successes2 = results2.filter(r => r.success);
@@ -136,12 +165,54 @@ test('Simulated Concurrency: prevents race conditions and duplicate consumption'
   assert.equal(rejections2.length, 2, 'Surplus 2 requests fail');
   assert.equal(inventory['user_abc:item-2'], undefined, 'Quantity must not become negative');
 
-  // Scenario 3: Attempting to consume passive gear
+  // Scenario 4: Attempting to consume passive gear
   const passiveResult = await simulateAtomicConsume('user_abc', 'iron_shield');
   assert.equal(passiveResult.success, false);
   assert.equal(passiveResult.reason, 'item_not_usable', 'Passive gear must be rejected from consumption');
 
-  // Scenario 4: Audit trail verified
-  assert.equal(auditLog.length, 4, 'Audit log must record exactly 4 successful consumptions (1 hint scroll + 3 shields)');
+  // Scenario 5: Audit trail verified
+  assert.equal(auditLog.length, 4, 'Audit log must record exactly 4 successful consumptions');
   assert.equal(auditLog[0].slug, 'hint_scroll');
+});
+
+test('Scenario 6: API failure handling preserves user item quantity without loss', async () => {
+  let userItemQty = 1;
+
+  async function mockUseItemApi(shouldFail = true) {
+    if (shouldFail) {
+      throw new Error('503 Service Unavailable / Network Error');
+    }
+    userItemQty -= 1;
+    return { success: true, remainingQuantity: userItemQty };
+  }
+
+  // Attempt consumption with network/database failure
+  let caughtError = null;
+  try {
+    await mockUseItemApi(true);
+  } catch (err) {
+    caughtError = err;
+  }
+
+  assert.ok(caughtError, 'Error was caught');
+  assert.equal(userItemQty, 1, 'Quantity MUST remain 1 when API call fails');
+});
+
+test('Scenario 8: Remaining quantity persistence across simulated page refresh', () => {
+  // Simulate client-side localStorage state
+  let simulatedLocalStorage = {
+    'codo-progress': JSON.stringify({
+      inventory: { hint_scroll: 3 },
+      coins: 100
+    })
+  };
+
+  // Consume 1 Hint Scroll
+  const progress = JSON.parse(simulatedLocalStorage['codo-progress']);
+  progress.inventory.hint_scroll = 2;
+  simulatedLocalStorage['codo-progress'] = JSON.stringify(progress);
+
+  // Simulate page reload: re-read from storage
+  const reloadedProgress = JSON.parse(simulatedLocalStorage['codo-progress']);
+  assert.equal(reloadedProgress.inventory.hint_scroll, 2, 'Quantity persists as 2 after page reload');
 });

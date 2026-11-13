@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useProgress } from '../../context/ProgressContext';
+import { useAuth } from '../../context/AuthContext';
 import { ITEMS, RARITY_COLORS } from '../../data/items';
+import { apiUrl } from '../../utils/api';
 import { Zap, Shield, Sparkles, Map as MapIcon, CheckCircle2, AlertCircle } from 'lucide-react';
 import PageHeader from '../../components/UI/PageHeader';
 import './Shop.css';
 
 export default function Shop() {
+  const { user } = useAuth();
   const { progress, buyItem, unlockRegion } = useProgress();
   const [activeTab, setActiveTab] = useState('items');
   const [toast, setToast] = useState(null);
@@ -66,6 +69,22 @@ export default function Shop() {
             message: `Purchased ${item.name}! Added to your Bag (Now x${count}).`,
             icon: item.icon,
           });
+
+          // Non-blocking sync to backend Supabase user_inventory
+          if (user?.getToken) {
+            user.getToken().then(token => {
+              if (token) {
+                fetch(apiUrl('/api/shop/buy'), {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                  },
+                  body: JSON.stringify({ itemId: item.id, itemSlug: item.id })
+                }).catch(() => {});
+              }
+            }).catch(() => {});
+          }
         } else {
           setToast({
             type: 'error',

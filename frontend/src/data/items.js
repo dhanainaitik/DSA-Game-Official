@@ -5,7 +5,7 @@ export const ITEMS = {
     name: "Hint Scroll",
     type: "consumable",
     rarity: "common",
-    description: "Reveals one test case input/output.",
+    description: "Reveals a strategic DSA hint for this problem.",
     price: 30,
     icon: "📜",
   },

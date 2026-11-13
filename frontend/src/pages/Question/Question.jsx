@@ -206,10 +206,19 @@ export default function Question() {
   }, [showInventory]);
 
   const handleUseItem = async (invItem) => {
-    if (!invItem) return;
+    if (!invItem || usingItemId) return;
     const itemId = invItem.item_id || invItem.id;
     const slug = invItem.items?.slug || itemId;
     const itemName = invItem.items?.name || 'Item';
+
+    console.log('[MagicBag Client] Trace Steps 1-4: USE button clicked', {
+      invItem,
+      slug,
+      itemId,
+      problemId,
+      quantity: invItem.quantity,
+      userId: user?.id || 'anonymous'
+    });
 
     // 1. Guard against duplicate activation of active buffs
     if (
@@ -227,7 +236,7 @@ export default function Question() {
     if (slug === 'hint_scroll') {
       const hintText = getProblemHint(problemId, problem);
       if (!hintText) {
-        showCombatText('NO HINT AVAILABLE FOR THIS QUESTION', 'enemy-hit');
+        showCombatText('No hint available for this problem', 'enemy-hit');
         return; // Do not consume scroll if hint is unavailable
       }
 
@@ -236,6 +245,7 @@ export default function Question() {
         let remainingAfter = Math.max(0, invItem.quantity - 1);
         if (user?.id) {
           const token = await user.getToken();
+          console.log('[MagicBag Client] Trace Step 5: Acquired Clerk token, dispatching /api/inventory/use');
           const response = await fetch(apiUrl('/api/inventory/use'), {
             method: 'POST',
             headers: {
@@ -247,26 +257,31 @@ export default function Question() {
               itemId,
               itemSlug: slug,
               problemId,
+              clientQty: invItem.quantity,
               context: { selectedLang }
             })
           });
 
+          console.log('[MagicBag Client] Trace Step 10: Received response status:', response.status);
+
           if (!response.ok) {
             const errData = await response.json().catch(() => ({}));
-            showCombatText(errData.error || 'FAILED TO USE HINT SCROLL', 'enemy-hit');
+            console.error('[MagicBag Client] Trace Step 10: Item use failed:', errData);
+            showCombatText(errData.error || 'Failed to use Hint Scroll', 'enemy-hit');
             setUsingItemId(null);
             return;
           }
 
           const resData = await response.json();
+          console.log('[MagicBag Client] Trace Step 10: Item use success:', resData);
           remainingAfter = resData.remainingQuantity ?? remainingAfter;
         }
 
-        // Apply hint unlock and sync remaining item quantity
+        // Apply hint unlock and sync remaining item quantity (Bag stays open per UX spec)
         useItem(itemId, remainingAfter);
         setUnlockedHint(hintText);
+        setShowCompanion(false); // Dismiss AI companion so it never covers the hint
         showCombatText('📜 HINT UNLOCKED!', 'player-hit');
-        setShowInventory(false);
 
         // Smooth scroll the hint into view in the left problem-description panel
         setTimeout(() => {
@@ -291,6 +306,7 @@ export default function Question() {
       let remainingAfter = Math.max(0, invItem.quantity - 1);
       if (user?.id) {
         const token = await user.getToken();
+        console.log('[MagicBag Client] Trace Step 5: Acquired Clerk token for consumable/boost');
         const response = await fetch(apiUrl('/api/inventory/use'), {
           method: 'POST',
           headers: {
@@ -302,25 +318,30 @@ export default function Question() {
             itemId,
             itemSlug: slug,
             problemId,
+            clientQty: invItem.quantity,
             context: { selectedLang }
           })
         });
 
+        console.log('[MagicBag Client] Trace Step 10: Received response status:', response.status);
+
         if (!response.ok) {
           const errData = await response.json().catch(() => ({}));
+          console.error('[MagicBag Client] Trace Step 10: Item use failed:', errData);
           showCombatText(errData.error || `FAILED TO USE ${itemName.toUpperCase()}`, 'enemy-hit');
           setUsingItemId(null);
           return;
         }
 
         const resData = await response.json();
+        console.log('[MagicBag Client] Trace Step 10: Item use success:', resData);
         remainingAfter = resData.remainingQuantity ?? remainingAfter;
       }
 
       // Update local inventory count
       useItem(itemId, remainingAfter);
 
-      // Apply gameplay buff mechanics
+      // Apply gameplay buff mechanics (Bag stays open per UX spec)
       if (slug === 'focus_charm') {
         setAttempts(0);
         setActiveItems(prev => ({ ...prev, focus_charm: true }));
@@ -345,8 +366,6 @@ export default function Question() {
         setActiveItems(prev => ({ ...prev, [slug]: true }));
         showCombatText(`${itemName.toUpperCase()} ACTIVATED!`, 'player-hit');
       }
-
-      setShowInventory(false);
 
     } catch (err) {
       console.error('Error using item:', err);
@@ -1123,6 +1142,16 @@ export default function Question() {
                       ✕ CLOSE
                     </button>
                   </div>
+
+                  {unlockedHint && (
+                    <div className="magic-bag-unlocked-hint-box">
+                      <div className="magic-bag-unlocked-hint-header">
+                        <Lightbulb size={15} />
+                        <span>ACTIVE DSA HINT</span>
+                      </div>
+                      <p className="magic-bag-unlocked-hint-text">{unlockedHint}</p>
+                    </div>
+                  )}
 
                   {inventory.length === 0 ? (
                     <div className="magic-bag-empty-wrap">

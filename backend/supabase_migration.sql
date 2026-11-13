@@ -730,7 +730,7 @@ CREATE POLICY "Users read own votes" ON votes FOR SELECT TO authenticated
 
 INSERT INTO items (slug, name, type, rarity, description, shop_price, icon_url)
 VALUES
-  ('hint_scroll', 'Hint Scroll', 'CONSUMABLE', 'COMMON', 'Reveals one test case input/output.', 30, '📜'),
+  ('hint_scroll', 'Hint Scroll', 'CONSUMABLE', 'COMMON', 'Reveals a strategic DSA hint for this problem.', 30, '📜'),
   ('retry_shield', 'Retry Shield', 'CONSUMABLE', 'UNCOMMON', 'Negates player HP loss on next fail.', 50, '🛡️'),
   ('focus_charm', 'Focus Charm', 'CONSUMABLE', 'RARE', 'Removes attempt penalty this battle.', 80, '🧿'),
   ('lightning_flask', 'Lightning Flask', 'CONSUMABLE', 'RARE', 'Doubles coin reward (this battle).', 100, '🧪'),
