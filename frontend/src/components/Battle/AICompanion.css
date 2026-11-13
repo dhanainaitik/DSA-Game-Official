@@ -60,22 +60,23 @@
 }
 
 .ai-companion-close {
-  background: transparent;
-  border: 1.5px solid transparent;
+  background: #fff;
+  border: 1.5px solid #000;
   border-radius: 4px;
-  color: #555;
+  color: #000;
   cursor: pointer;
-  padding: 2px;
+  padding: 3px 5px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 1px 1px 0 #000;
   transition: all 0.15s ease;
 }
 
 .ai-companion-close:hover {
   color: #000;
   background: #FFD600;
-  border-color: #000;
+  transform: translate(-1px, -1px);
 }
 
 .sparkle-icon {
