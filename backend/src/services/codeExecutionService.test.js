@@ -104,6 +104,39 @@ describe('Multi-Language Code Execution Engine', () => {
     assert.equal(res.results[2].passed, true);
   });
 
+  test('C++ solution with *max_element and bits/stdc++.h passes test cases [3,1,4,1,5]->5, [-5,-1,-3]->-1, [7]->7', async () => {
+    const code = `
+      #include <bits/stdc++.h>
+      using namespace std;
+
+      int solve(vector<int>& arr) {
+        return *max_element(arr.begin(), arr.end());
+      }
+    `;
+    const userTestCases = [
+      { input: [3, 1, 4, 1, 5], expected: 5 },
+      { input: [-5, -1, -3], expected: -1 },
+      { input: [7], expected: 7 },
+    ];
+    const res = await executeCode({
+      language: 'cpp',
+      code,
+      problemId: 'p-arr-1-3',
+      testCases: userTestCases,
+    });
+
+    assert.equal(res.compileError, null);
+    assert.equal(res.passed, true);
+    assert.equal(res.passedCount, 3);
+    assert.equal(res.totalCount, 3);
+    assert.equal(res.results[0].actual, '5');
+    assert.equal(res.results[0].passed, true);
+    assert.equal(res.results[1].actual, '-1');
+    assert.equal(res.results[1].passed, true);
+    assert.equal(res.results[2].actual, '7');
+    assert.equal(res.results[2].passed, true);
+  });
+
   test('Incorrect C++ Maximum Signal Solution fails accurately', async () => {
     const code = `
       #include <bits/stdc++.h>

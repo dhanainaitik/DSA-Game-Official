@@ -4,6 +4,7 @@
  */
 
 import { apiUrl } from './api.js';
+import { safeParseApiResponse } from './apiResponseHandler.js';
 
 /**
  * Normalizes output and expected values for comparison.
@@ -148,31 +149,37 @@ export async function runCode(userCode, language, testCases = [], userToken = nu
       }),
     });
 
-    const data = await response.json();
+    const parsed = await safeParseApiResponse(response);
 
-    if (!response.ok) {
-      const errMsg = data.error || 'Execution failed on server';
+    if (!parsed.ok) {
+      const errMsg = parsed.serviceError || 'Remote compiler service unavailable';
       const results = testCases.map((tc, idx) => ({
         caseNumber: idx + 1,
         input: typeof tc.input === 'string' ? tc.input : JSON.stringify(tc.input),
         expected: normalize(tc.expected),
         expectedOutput: normalize(tc.expected),
-        actual: 'Server Error',
-        actualOutput: 'Server Error',
+        actual: 'Compiler Unavailable',
+        actualOutput: 'Compiler Unavailable',
         passed: false,
-        status: 'error',
+        status: 'service_error',
         error: errMsg,
+        executionTime: 0,
+        duration: '0.0',
       }));
       results.error = errMsg;
-      results.runtimeError = errMsg;
+      results.serviceError = errMsg;
+      results.runtimeError = null;
       results.compileError = null;
       results.passed = false;
       results.success = false;
       results.passedCount = 0;
       results.totalCount = testCases.length;
       results.language = normalizedLang;
+      results.feedback = errMsg;
       return results;
     }
+
+    const data = parsed.data;
 
     if (data.compileError) {
       const results = (Array.isArray(data.results) && data.results.length > 0)
@@ -187,10 +194,13 @@ export async function runCode(userCode, language, testCases = [], userToken = nu
             passed: false,
             status: 'error',
             error: data.compileError,
+            executionTime: 0,
+            duration: '0.0',
           }));
       results.error = data.compileError;
       results.compileError = data.compileError;
       results.runtimeError = null;
+      results.serviceError = null;
       results.passed = false;
       results.success = false;
       results.passedCount = 0;
@@ -204,6 +214,7 @@ export async function runCode(userCode, language, testCases = [], userToken = nu
     const passedCount = results.filter(r => r.passed).length;
     results.compileError = null;
     results.runtimeError = data.runtimeError || null;
+    results.serviceError = null;
     results.error = data.runtimeError || null;
     results.passed = Boolean(data.passed);
     results.success = Boolean(data.passed);
@@ -214,26 +225,31 @@ export async function runCode(userCode, language, testCases = [], userToken = nu
     results.feedback = data.feedback || '';
     return results;
   } catch (err) {
-    console.error('Remote Runner Error:', err);
+    console.error('Remote Runner Network Error:', err);
+    const errMsg = 'Remote compiler unavailable: ' + (err.message || 'Network connection failed');
     const results = testCases.map((tc, idx) => ({
       caseNumber: idx + 1,
       input: typeof tc.input === 'string' ? tc.input : JSON.stringify(tc.input),
       expected: normalize(tc.expected),
       expectedOutput: normalize(tc.expected),
-      actual: 'Remote engine unavailable',
-      actualOutput: 'Remote engine unavailable',
+      actual: 'Compiler Unavailable',
+      actualOutput: 'Compiler Unavailable',
       passed: false,
-      status: 'error',
-      error: err.message,
+      status: 'service_error',
+      error: errMsg,
+      executionTime: 0,
+      duration: '0.0',
     }));
-    results.error = 'Remote compiler unavailable: ' + err.message;
-    results.runtimeError = 'Remote compiler unavailable: ' + err.message;
+    results.error = errMsg;
+    results.serviceError = errMsg;
+    results.runtimeError = null;
     results.compileError = null;
     results.passed = false;
     results.success = false;
     results.passedCount = 0;
     results.totalCount = testCases.length;
     results.language = normalizedLang;
+    results.feedback = errMsg;
     return results;
   }
 }

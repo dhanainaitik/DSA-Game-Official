@@ -19,6 +19,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { runCode } from '../../utils/codeRunner';
 import { apiUrl } from '../../utils/api';
+import { safeParseApiResponse } from '../../utils/apiResponseHandler';
 import { triggerGoblinDefeatEffects, preloadGoblinAudio } from '../../utils/goblinEffects';
 import { diagnoseSubmissionForCodoGuide, runStaticDiagnostics } from '../../utils/codoGuideAnalyzer';
 import gsap from 'gsap';
@@ -480,20 +481,33 @@ export default function Question() {
           }),
         });
 
-        const apiJson = await response.json();
-        if (response.ok) {
-          result = apiJson;
+        const parsed = await safeParseApiResponse(response);
+        if (parsed.ok) {
+          result = parsed.data;
         } else {
           result = {
-            results: [],
+            results: (problem.testCases || []).map((tc, idx) => ({
+              caseNumber: idx + 1,
+              input: typeof tc.input === 'string' ? tc.input : JSON.stringify(tc.input),
+              expected: tc.expected,
+              expectedOutput: tc.expected,
+              actual: 'Compiler Unavailable',
+              actualOutput: 'Compiler Unavailable',
+              passed: false,
+              status: 'service_error',
+              error: parsed.serviceError,
+            })),
             passed: false,
-            feedback: apiJson.error || 'Server rejected submission.',
-            details: apiJson.error || 'Execution could not be completed.',
+            serviceError: parsed.serviceError,
+            compileError: null,
+            runtimeError: null,
+            feedback: parsed.serviceError,
+            details: 'Execution could not be completed: ' + parsed.serviceError,
             complexity: { time: 'N/A', space: 'N/A' },
           };
         }
       } catch (fetchErr) {
-        console.warn('API execute failed:', fetchErr);
+        console.warn('API execute network failed:', fetchErr);
         // Only if JavaScript was selected do we allow local evaluation fallback
         if (selectedLang === 'javascript') {
           const localResults = await runCode(code, selectedLang, testCases, token, problemId);
@@ -511,10 +525,24 @@ export default function Question() {
           };
         } else {
           const staticCheck = runStaticDiagnostics(code, selectedLang);
+          const errMsg = 'Remote compiler unavailable: ' + (fetchErr.message || 'Network connection failed');
           result = {
-            results: [],
+            results: (problem.testCases || []).map((tc, idx) => ({
+              caseNumber: idx + 1,
+              input: typeof tc.input === 'string' ? tc.input : JSON.stringify(tc.input),
+              expected: tc.expected,
+              expectedOutput: tc.expected,
+              actual: 'Compiler Unavailable',
+              actualOutput: 'Compiler Unavailable',
+              passed: false,
+              status: 'service_error',
+              error: errMsg,
+            })),
             passed: false,
-            feedback: staticCheck ? staticCheck.message : 'Unable to connect to remote compiler.',
+            serviceError: errMsg,
+            compileError: null,
+            runtimeError: null,
+            feedback: staticCheck ? staticCheck.message : errMsg,
             details: staticCheck
               ? (staticCheck.nextStep || 'Fix the issue shown above and try again.')
               : 'Unable to connect to the backend compiler service. Verify connectivity.',
@@ -535,6 +563,7 @@ export default function Question() {
         allPassed: Boolean(result.passed),
         compileError: result.compileError || null,
         runtimeError: result.runtimeError || null,
+        serviceError: result.serviceError || null,
       });
       setAiFeedback(result);
       setPanelOpen(true);

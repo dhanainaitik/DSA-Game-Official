@@ -152,8 +152,9 @@ async function executeCode({ language, code, problemId, testCases = [], mode = '
     const startTime = Date.now();
 
     if (normalizedLang === 'cpp') {
+      const binExt = process.platform === 'win32' ? '.exe' : '.bin';
       const srcFile = path.join(tmpDir, 'solution.cpp');
-      const binFile = path.join(tmpDir, 'solution.exe');
+      const binFile = path.join(tmpDir, `solution${binExt}`);
 
       const fullSource = buildCppSource(code, testCases, problemId);
       await fs.promises.writeFile(srcFile, fullSource, 'utf8');
@@ -253,8 +254,9 @@ async function executeCode({ language, code, problemId, testCases = [], mode = '
           : `${passedCount} of ${results.length} test cases passed.`,
       };
     } else if (normalizedLang === 'c') {
+      const binExt = process.platform === 'win32' ? '.exe' : '.bin';
       const srcFile = path.join(tmpDir, 'solution.c');
-      const binFile = path.join(tmpDir, 'solution.exe');
+      const binFile = path.join(tmpDir, `solution${binExt}`);
 
       const fullSource = buildCSource(code, testCases, problemId);
       await fs.promises.writeFile(srcFile, fullSource, 'utf8');

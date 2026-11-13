@@ -118,4 +118,30 @@ describe('Test Cases & Results Data Model Tests', () => {
     assert.equal(normalize(' [1, 2, 3] '), '[1,2,3]');
     assert.equal(normalize('true'), 'true');
   });
+
+  test('5. Remote compiler unavailable: produces service_error status and does not falsely claim Wrong Answer', async () => {
+    // When remote server returns empty or unreachable, runCode captures service_error
+    // Mock global fetch to return 503 empty response
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = async () => ({
+      status: 503,
+      statusText: 'Service Unavailable',
+      ok: false,
+      text: async () => '',
+      headers: { get: () => 'text/plain' },
+    });
+
+    try {
+      const results = await runCode('int solve(){}', 'cpp', sampleTestCases);
+      assert.equal(results.length, 3);
+      assert.equal(results.passed, false);
+      assert.equal(results.passedCount, 0);
+      assert.equal(results[0].status, 'service_error');
+      assert.equal(results[0].actual, 'Compiler Unavailable');
+      assert.ok(results.serviceError.includes('503'));
+      assert.ok(results.error.includes('503'));
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
 });

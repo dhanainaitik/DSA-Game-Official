@@ -15,10 +15,14 @@ export function buildApiUrl(baseUrl, path) {
   return cleanBase ? `${cleanBase}${normalizedPath}` : normalizedPath;
 }
 
-export const API_BASE_URL = normalizeApiBaseUrl(import.meta.env?.VITE_API_URL);
+export const DEFAULT_PROD_API_URL = 'https://codo-champ-backend.onrender.com';
 
-if (import.meta.env?.PROD && !API_BASE_URL) {
-  console.warn('[API] VITE_API_URL is not configured for this production build.');
+export const API_BASE_URL = normalizeApiBaseUrl(
+  import.meta.env?.VITE_API_URL || (import.meta.env?.PROD ? DEFAULT_PROD_API_URL : '')
+);
+
+if (import.meta.env?.PROD && !import.meta.env?.VITE_API_URL) {
+  console.info('[API] Using default production backend URL:', DEFAULT_PROD_API_URL);
 }
 
 export function apiUrl(path) {

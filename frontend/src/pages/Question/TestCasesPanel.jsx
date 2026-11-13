@@ -45,13 +45,14 @@ export default function TestCasesPanel({
   const currentResults = runResults || submitResult?.results || null;
   const compileError = runResults?.compileError || submitResult?.compileError || null;
   const runtimeError = runResults?.runtimeError || submitResult?.runtimeError || null;
+  const serviceError = runResults?.serviceError || submitResult?.serviceError || null;
 
   // Derive execution stats
   const totalCount = testCases.length;
   const resultsAvailable = Array.isArray(currentResults) && currentResults.length > 0;
   const passedCount = resultsAvailable ? currentResults.filter(r => r.passed).length : 0;
-  const allPassed = resultsAvailable && passedCount === currentResults.length && !compileError && !runtimeError;
-  const hasFailed = resultsAvailable && (!allPassed || compileError || runtimeError);
+  const allPassed = resultsAvailable && passedCount === currentResults.length && !compileError && !runtimeError && !serviceError;
+  const hasFailed = resultsAvailable && (!allPassed || compileError || runtimeError || serviceError);
 
   // Auto-select first failing test case on failed run or submit
   useEffect(() => {
@@ -108,6 +109,11 @@ export default function TestCasesPanel({
               <Loader2 size={13} className="spin-icon" />
               <span>RUNNING...</span>
             </span>
+          ) : serviceError ? (
+            <span className="tc-status-pill error" title={serviceError}>
+              <AlertTriangle size={13} />
+              <span>COMPILER UNAVAILABLE</span>
+            </span>
           ) : compileError ? (
             <span className="tc-status-pill error">
               <AlertTriangle size={13} />
@@ -116,7 +122,7 @@ export default function TestCasesPanel({
           ) : runtimeError ? (
             <span className="tc-status-pill error">
               <AlertCircle size={13} />
-              <span>RUNTIME ERROR</span>
+              <span>{runtimeError.includes('Time Limit') ? 'TIME LIMIT EXCEEDED' : 'RUNTIME ERROR'}</span>
             </span>
           ) : resultsAvailable && allPassed ? (
             <span className="tc-status-pill pass">
@@ -225,14 +231,16 @@ export default function TestCasesPanel({
               </div>
             )}
 
-            {/* ── 3. Dedicated Compiler / Runtime Error Output Panel ── */}
-            {(compileError || runtimeError) && (
+            {/* ── 3. Dedicated Compiler / Runtime / Service Error Output Panel ── */}
+            {(serviceError || compileError || runtimeError) && (
               <div className="compiler-error-box animate-fadeIn">
                 <div className="compiler-error-header">
                   <div className="error-title-wrap">
                     <AlertTriangle size={16} className="error-icon" />
                     <span className="compiler-error-title">
-                      {compileError
+                      {serviceError
+                        ? 'COMPILER SERVICE UNAVAILABLE'
+                        : compileError
                         ? `COMPILATION ERROR (${selectedLang === 'cpp' ? 'g++' : selectedLang === 'c' ? 'gcc' : 'SyntaxError'})`
                         : (runtimeError?.includes('Time Limit') ? 'TIME LIMIT EXCEEDED (3000ms)' : 'RUNTIME ERROR')
                       }
@@ -240,7 +248,7 @@ export default function TestCasesPanel({
                   </div>
                   <button
                     className="btn-copy-error"
-                    onClick={() => handleCopy(compileError || runtimeError, 'compErr')}
+                    onClick={() => handleCopy(serviceError || compileError || runtimeError, 'compErr')}
                     title="Copy full error output"
                   >
                     {copiedKey === 'compErr' ? <Check size={13} /> : <Copy size={13} />}
@@ -248,7 +256,7 @@ export default function TestCasesPanel({
                   </button>
                 </div>
                 <pre className="compiler-error-terminal">
-                  <code>{compileError || runtimeError}</code>
+                  <code>{serviceError || compileError || runtimeError}</code>
                 </pre>
               </div>
             )}
@@ -259,18 +267,21 @@ export default function TestCasesPanel({
                 {testCases.map((tc, idx) => {
                   const res = currentResults ? currentResults[idx] : null;
                   const isPassed = res?.passed === true;
-                  const isFailed = res && !res.passed;
+                  const isServiceError = res?.status === 'service_error' || Boolean(serviceError);
+                  const isFailed = res && !res.passed && !isServiceError;
                   const isSelected = idx === safeIndex;
 
                   return (
                     <button
                       key={idx}
-                      className={`tc-tab-btn ${isSelected ? 'active' : ''} ${isPassed ? 'status-pass' : isFailed ? 'status-fail' : 'status-neutral'}`}
+                      className={`tc-tab-btn ${isSelected ? 'active' : ''} ${isPassed ? 'status-pass' : isServiceError ? 'status-warning' : isFailed ? 'status-fail' : 'status-neutral'}`}
                       onClick={() => setSelectedCaseIndex(idx)}
                     >
                       <span className="tc-tab-indicator">
                         {isPassed ? (
                           <CheckCircle2 size={13} className="tab-icon pass" />
+                        ) : isServiceError ? (
+                          <AlertTriangle size={13} className="tab-icon warning" color="#D97706" />
                         ) : isFailed ? (
                           <XCircle size={13} className="tab-icon fail" />
                         ) : (
@@ -332,8 +343,14 @@ export default function TestCasesPanel({
                 <div className="tc-detail-title-group">
                   <span className="tc-detail-casename">TEST CASE {safeIndex + 1}</span>
                   {activeResult ? (
-                    <span className={`tc-detail-badge ${activeResult.passed ? 'pass' : 'fail'}`}>
-                      {activeResult.passed ? 'PASSED' : activeResult.error ? 'FAILED (ERROR)' : 'FAILED'}
+                    <span className={`tc-detail-badge ${activeResult.passed ? 'pass' : (activeResult.status === 'service_error' || serviceError) ? 'warning' : 'fail'}`}>
+                      {activeResult.passed
+                        ? 'PASSED'
+                        : (activeResult.status === 'service_error' || serviceError)
+                        ? 'COMPILER UNAVAILABLE'
+                        : activeResult.error
+                        ? 'FAILED (ERROR)'
+                        : 'FAILED (WRONG ANSWER)'}
                     </span>
                   ) : (
                     <span className="tc-detail-badge neutral">NOT RUN</span>
@@ -416,12 +433,22 @@ export default function TestCasesPanel({
                 </div>
               </div>
 
-              {/* Fail Diff Callout (when actual != expected) */}
-              {activeResult && !activeResult.passed && !compileError && (
+              {/* Fail Diff Callout (when actual != expected and code was actually evaluated) */}
+              {activeResult && !activeResult.passed && !compileError && !serviceError && activeResult.status !== 'service_error' && (
                 <div className="tc-diff-banner">
                   <AlertCircle size={15} className="diff-icon" />
                   <span>
                     <strong>Output Mismatch:</strong> Expected <code>{String(activeTestCase.expected)}</code> but your solution returned <code>{String(activeResult.actual)}</code>.
+                  </span>
+                </div>
+              )}
+
+              {/* Service Error Notice (when code was blocked before execution) */}
+              {(serviceError || activeResult?.status === 'service_error') && (
+                <div className="tc-diff-banner warning" style={{ background: '#FEF3C7', borderColor: '#F59E0B' }}>
+                  <AlertTriangle size={15} className="diff-icon" color="#D97706" />
+                  <span>
+                    <strong>Execution Not Completed:</strong> The remote compiler service could not process this code ({activeResult?.error || serviceError}). Your logic was not evaluated.
                   </span>
                 </div>
               )}

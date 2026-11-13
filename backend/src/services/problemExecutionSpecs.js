@@ -59,8 +59,20 @@ function buildCppSource(userCode, testCases, problemId) {
 #include <queue>
 #include <stack>
 #include <sstream>
+#include <numeric>
+#include <utility>
+#include <deque>
+#include <unordered_map>
+#include <unordered_set>
+#include <iterator>
+#include <functional>
+#include <cassert>
 using namespace std;
 `;
+
+  // Safely normalize user code: if user code includes <bits/stdc++.h>, substitute with comment
+  // because all standard STL headers are explicitly included above, guaranteeing cross-platform compilation
+  const normalizedUserCode = userCode.replace(/#\s*include\s*<bits\/stdc\+\+\.h>/g, '// [Codo Champ Engine] Standard STL headers included');
 
   // Provide ListNode definition if problem needs it and user code doesn't define it
   const isLLProblem = spec.type.startsWith('LINKED_LIST') || spec.type.startsWith('TWO_LINKED_LISTS');
@@ -291,7 +303,7 @@ void printList(ListNode* head) {
 
   mainBody += '    return 0;\n}\n';
 
-  return `${header}\n${userCode}\n${harnessHelpers}\n${mainBody}`;
+  return `${header}\n${normalizedUserCode}\n${harnessHelpers}\n${mainBody}`;
 }
 
 /**
