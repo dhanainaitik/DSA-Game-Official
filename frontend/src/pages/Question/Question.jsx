@@ -21,6 +21,7 @@ import { runCode } from '../../utils/codeRunner';
 import { apiUrl } from '../../utils/api';
 import { safeParseApiResponse } from '../../utils/apiResponseHandler';
 import { triggerGoblinDefeatEffects, preloadGoblinAudio } from '../../utils/goblinEffects';
+import { playVictoryCrowdCheer, preloadVictorySound, stopVictoryCrowdCheer } from '../../utils/victorySound';
 import { diagnoseSubmissionForCodoGuide, runStaticDiagnostics } from '../../utils/codoGuideAnalyzer';
 import gsap from 'gsap';
 import AICompanion from '../../components/Battle/AICompanion';
@@ -68,11 +69,12 @@ export default function Question() {
   const [panelOpen, setPanelOpen] = useState(true);
   const panelRef = useRef(null);
 
-  // Clear unlocked hint and reset language caches when switching questions & preload Goblin sound
+  // Clear unlocked hint and reset language caches when switching questions & preload sounds
   useEffect(() => {
     setCodesByLanguage({});
     setUnlockedHint(null);
     preloadGoblinAudio();
+    preloadVictorySound();
     setShowCompanion(false);
     setCompanionGuide(null);
     hasEncouragedTypingRef.current = false;
@@ -80,6 +82,10 @@ export default function Question() {
     setSubmitResult(null);
     setAiFeedback(null);
     setTestCases(problem?.testCases || []);
+
+    return () => {
+      stopVictoryCrowdCheer();
+    };
   }, [problemId]);
 
   // V3 Battle State
@@ -593,8 +599,10 @@ export default function Question() {
       }
       damage = Math.max(0, damage);
       
-      if (correctness === 1) {
-        // Critical Strike / Full Success
+      if (correctness === 1 && result.passed) {
+        // Critical Strike / Full Success — Play authentic 3.5s crowd cheer sound
+        playVictoryCrowdCheer();
+
         gsap.to({}, { duration: 0, onStart: triggerScreenShake });
         showCombatText('CRITICAL STRIKE!', 'player-hit');
         if (damage > 0) spawnDamageNumber(damage, 'enemy');
