@@ -1003,3 +1003,126 @@ GRANT EXECUTE ON FUNCTION public.deduct_battle_ground_entry(TEXT[]) TO service_r
 
 REVOKE EXECUTE ON FUNCTION public.award_problem_coins(TEXT, TEXT, TEXT, TEXT, INT) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.award_problem_coins(TEXT, TEXT, TEXT, TEXT, INT) TO service_role;
+
+-- ─── 3.12 User Item Usage History (Audit Trail) ───────────────
+CREATE TABLE IF NOT EXISTS public.user_item_usage_history (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  clerk_id    TEXT NOT NULL REFERENCES public.player_profiles(clerk_id) ON DELETE CASCADE,
+  item_id     UUID NOT NULL REFERENCES public.items(id) ON DELETE CASCADE,
+  item_slug   TEXT NOT NULL,
+  problem_id  TEXT,
+  context     JSONB DEFAULT '{}'::jsonb,
+  used_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_item_usage_clerk ON public.user_item_usage_history(clerk_id, used_at DESC);
+CREATE INDEX IF NOT EXISTS idx_user_item_usage_item ON public.user_item_usage_history(item_id);
+
+ALTER TABLE public.user_item_usage_history ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users read own item usage history" ON user_item_usage_history;
+CREATE POLICY "Users read own item usage history" ON user_item_usage_history FOR SELECT TO authenticated
+  USING (auth.jwt() ->> 'sub' IS NOT NULL AND clerk_id = auth.jwt() ->> 'sub');
+
+-- ─── 7.4 Atomic Item Consumption Function ─────────────────────
+CREATE OR REPLACE FUNCTION public.consume_user_inventory_item(
+  p_clerk_id   TEXT,
+  p_item_slug  TEXT,
+  p_problem_id TEXT DEFAULT NULL,
+  p_context    JSONB DEFAULT '{}'::jsonb
+) RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_clean_clerk_id TEXT;
+  v_clean_slug     TEXT;
+  v_item           RECORD;
+  v_inv_id         UUID;
+  v_current_qty    INT;
+  v_remaining_qty  INT;
+BEGIN
+  v_clean_clerk_id := trim(coalesce(p_clerk_id, ''));
+  v_clean_slug     := lower(trim(coalesce(p_item_slug, '')));
+
+  IF v_clean_clerk_id = '' OR v_clean_slug = '' THEN
+    RETURN jsonb_build_object('success', false, 'reason', 'invalid_arguments');
+  END IF;
+
+  -- 1. Validate Item existence in items catalog (match slug or id)
+  SELECT id, slug, name, type, rarity, effect
+  INTO v_item
+  FROM public.items
+  WHERE lower(slug) = v_clean_slug
+     OR (id::text = v_clean_slug)
+  LIMIT 1;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('success', false, 'reason', 'item_not_found');
+  END IF;
+
+  -- 2. Validate Item usability (only CONSUMABLE and BOOST items can be consumed)
+  IF v_item.type NOT IN ('CONSUMABLE', 'BOOST') THEN
+    RETURN jsonb_build_object('success', false, 'reason', 'item_not_usable', 'type', v_item.type);
+  END IF;
+
+  -- 3. Lock user inventory row FOR UPDATE to prevent race conditions
+  SELECT id, quantity
+  INTO v_inv_id, v_current_qty
+  FROM public.user_inventory
+  WHERE clerk_id = v_clean_clerk_id
+    AND item_id = v_item.id
+  FOR UPDATE;
+
+  IF NOT FOUND OR v_current_qty IS NULL OR v_current_qty <= 0 THEN
+    RETURN jsonb_build_object(
+      'success', false,
+      'reason', 'insufficient_quantity',
+      'current_quantity', coalesce(v_current_qty, 0)
+    );
+  END IF;
+
+  -- 4. Atomically decrement quantity (delete row if 1, else decrement)
+  IF v_current_qty = 1 THEN
+    DELETE FROM public.user_inventory
+    WHERE id = v_inv_id;
+    v_remaining_qty := 0;
+  ELSE
+    UPDATE public.user_inventory
+    SET quantity = quantity - 1
+    WHERE id = v_inv_id
+    RETURNING quantity INTO v_remaining_qty;
+  END IF;
+
+  -- 5. Record usage in audit history
+  INSERT INTO public.user_item_usage_history (
+    clerk_id,
+    item_id,
+    item_slug,
+    problem_id,
+    context,
+    used_at
+  ) VALUES (
+    v_clean_clerk_id,
+    v_item.id,
+    v_item.slug,
+    p_problem_id,
+    coalesce(p_context, '{}'::jsonb),
+    NOW()
+  );
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'item_id', v_item.id,
+    'item_slug', v_item.slug,
+    'item_name', v_item.name,
+    'remaining_quantity', v_remaining_qty,
+    'effect', v_item.effect
+  );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.consume_user_inventory_item(TEXT, TEXT, TEXT, JSONB) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.consume_user_inventory_item(TEXT, TEXT, TEXT, JSONB) TO service_role;
+

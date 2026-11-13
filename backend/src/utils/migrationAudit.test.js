@@ -45,6 +45,7 @@ test('SECURITY DEFINER: Enforces secure search_path and schema qualification', (
     'award_pvp_win_token',
     'deduct_battle_ground_entry',
     'award_problem_coins',
+    'consume_user_inventory_item',
   ];
 
   for (const fn of secDefinerFunctions) {
@@ -110,11 +111,12 @@ test('RLS Security: strictly forbids COALESCE bypass and protects private user d
     'shop_transactions',
     'coin_transactions',
     'votes',
+    'user_item_usage_history',
   ];
 
   for (const table of privateTables) {
     const tablePolicyRegex = new RegExp(
-      `CREATE\\s+POLICY\\s+"[^"]+"\\s+ON\\s+${table}[\\s\\S]*?USING\\s*\\([\\s\\S]*?auth\\.jwt\\(\\)\\s*->>\\s*'sub'\\s+IS\\s+NOT\\s+NULL[\\s\\S]*?clerk_id\\s*=\\s*auth\\.jwt\\(\\)\\s*->>\\s*'sub'`,
+      `CREATE\\s+POLICY\\s+"[^"]+"\\s+ON\\s+(public\\.)?${table}[\\s\\S]*?USING\\s*\\([\\s\\S]*?auth\\.jwt\\(\\)\\s*->>\\s*'sub'\\s+IS\\s+NOT\\s+NULL[\\s\\S]*?clerk_id\\s*=\\s*auth\\.jwt\\(\\)\\s*->>\\s*'sub'`,
       'i'
     );
     assert.ok(tablePolicyRegex.test(migrationSql), `Private table ${table} must strictly require non-null verified JWT sub`);

@@ -192,6 +192,18 @@ export default function Question() {
   const inventory = getInventoryList();
   const [showInventory, setShowInventory] = useState(false);
   const [activeItems, setActiveItems] = useState({});
+  const [usingItemId, setUsingItemId] = useState(null);
+
+  // Dismiss inventory on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && showInventory) {
+        setShowInventory(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showInventory]);
 
   const handleUseItem = async (invItem) => {
     if (!invItem) return;
@@ -199,7 +211,19 @@ export default function Question() {
     const slug = invItem.items?.slug || itemId;
     const itemName = invItem.items?.name || 'Item';
 
-    // Apply immediate gameplay effects
+    // 1. Guard against duplicate activation of active buffs
+    if (
+      (slug === 'retry_shield' && activeItems.retry_shield) ||
+      (slug === 'lightning_flask' && activeItems.lightning_flask) ||
+      (slug === 'focus_charm' && activeItems.focus_charm) ||
+      (slug === 'shadow_veil' && activeItems.shadow_veil) ||
+      (slug === 'xp_tome' && (activeItems.xp_tome || isBuffActive('xp_tome')))
+    ) {
+      showCombatText(`${itemName.toUpperCase()} ALREADY ACTIVE`, 'enemy-hit');
+      return;
+    }
+
+    // 2. Hint Scroll: Must safely verify problem-specific hint exists BEFORE consuming
     if (slug === 'hint_scroll') {
       const hintText = getProblemHint(problemId, problem);
       if (!hintText) {
@@ -207,99 +231,129 @@ export default function Question() {
         return; // Do not consume scroll if hint is unavailable
       }
 
-      const res = useItem(itemId);
-      if (!res.success) {
-        showCombatText('ITEM NOT IN BAG', 'enemy-hit');
-        return;
-      }
-
-      setUnlockedHint(hintText);
-      showCombatText('📜 HINT UNLOCKED!', 'player-hit');
-      setShowInventory(false);
-
-      // Smooth scroll the hint into view in the left problem-description panel
-      setTimeout(() => {
-        const hintEl = document.getElementById('unlocked-hint-card');
-        if (hintEl) {
-          hintEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
-      }, 100);
-
-      // Non-blocking sync to backend if user is logged in
-      if (user?.getToken) {
-        try {
-          const token = await user.getToken();
-          if (token) {
-            fetch('/api/inventory/use', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify({ itemId })
-            }).catch(() => {});
-          }
-        } catch {
-          // Ignore backend failure
-        }
-      }
-      return;
-    }
-
-    // Consume 1 from unified inventory in ProgressContext for other items
-    const res = useItem(itemId);
-    if (!res.success) {
-      showCombatText('ITEM NOT IN BAG', 'enemy-hit');
-      return;
-    }
-
-    if (slug === 'focus_charm') {
-      setAttempts(0);
-      setActiveItems(prev => ({ ...prev, focus_charm: true }));
-      showCombatText('🧿 ATTEMPTS RESET! ZERO PENALTY', 'player-hit');
-    } else if (slug === 'healing_potion') {
-      setPlayerHP(100);
-      showCombatText('❤️ HP RESTORED TO 100%!', 'player-hit');
-    } else if (slug === 'retry_shield') {
-      setActiveItems(prev => ({ ...prev, retry_shield: true }));
-      showCombatText('🛡️ RETRY SHIELD ACTIVE (BLOCKS NEXT HIT)!', 'player-hit');
-    } else if (slug === 'lightning_flask') {
-      setActiveItems(prev => ({ ...prev, lightning_flask: true }));
-      showCombatText('🧪 2X COIN REWARD ON SOLVE!', 'player-hit');
-    } else if (slug === 'shadow_veil') {
-      setActiveItems(prev => ({ ...prev, shadow_veil: true }));
-      showCombatText('🥷 SHADOW VEIL ACTIVE (-50% DMG / STEALTH)!', 'player-hit');
-    } else if (slug === 'xp_tome') {
-      activateBuff('xp_tome', 3600000);
-      setActiveItems(prev => ({ ...prev, xp_tome: true }));
-      showCombatText('📘 +50% XP BOOST ACTIVE (1 HOUR)!', 'player-hit');
-    } else {
-      setActiveItems(prev => ({ ...prev, [slug]: true }));
-      showCombatText(`${itemName.toUpperCase()} ACTIVATED!`, 'player-hit');
-    }
-
-    // Non-blocking sync to backend if user is logged in
-    if (user?.getToken) {
+      setUsingItemId(invItem.id || slug);
       try {
-        const token = await user.getToken();
-        if (token) {
-          fetch('/api/inventory/use', {
+        let remainingAfter = Math.max(0, invItem.quantity - 1);
+        if (user?.id) {
+          const token = await user.getToken();
+          const response = await fetch(apiUrl('/api/inventory/use'), {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'Accept': 'application/json',
               'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ itemId })
-          }).catch(() => {});
+            body: JSON.stringify({
+              itemId,
+              itemSlug: slug,
+              problemId,
+              context: { selectedLang }
+            })
+          });
+
+          if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            showCombatText(errData.error || 'FAILED TO USE HINT SCROLL', 'enemy-hit');
+            setUsingItemId(null);
+            return;
+          }
+
+          const resData = await response.json();
+          remainingAfter = resData.remainingQuantity ?? remainingAfter;
         }
-      } catch {
-        // Ignore backend sync failure, local state is authoritative
+
+        // Apply hint unlock and sync remaining item quantity
+        useItem(itemId, remainingAfter);
+        setUnlockedHint(hintText);
+        showCombatText('📜 HINT UNLOCKED!', 'player-hit');
+        setShowInventory(false);
+
+        // Smooth scroll the hint into view in the left problem-description panel
+        setTimeout(() => {
+          const hintEl = document.getElementById('unlocked-hint-card');
+          if (hintEl) {
+            hintEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        }, 120);
+
+      } catch (err) {
+        console.error('Error using hint scroll:', err);
+        showCombatText('USAGE ERROR - ITEM PRESERVED', 'enemy-hit');
+      } finally {
+        setUsingItemId(null);
       }
+      return;
     }
 
-    setShowInventory(false);
+    // 3. Other Consumables & Boosts (Atomic Server-Validated Consumption)
+    setUsingItemId(invItem.id || slug);
+    try {
+      let remainingAfter = Math.max(0, invItem.quantity - 1);
+      if (user?.id) {
+        const token = await user.getToken();
+        const response = await fetch(apiUrl('/api/inventory/use'), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            itemId,
+            itemSlug: slug,
+            problemId,
+            context: { selectedLang }
+          })
+        });
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          showCombatText(errData.error || `FAILED TO USE ${itemName.toUpperCase()}`, 'enemy-hit');
+          setUsingItemId(null);
+          return;
+        }
+
+        const resData = await response.json();
+        remainingAfter = resData.remainingQuantity ?? remainingAfter;
+      }
+
+      // Update local inventory count
+      useItem(itemId, remainingAfter);
+
+      // Apply gameplay buff mechanics
+      if (slug === 'focus_charm') {
+        setAttempts(0);
+        setActiveItems(prev => ({ ...prev, focus_charm: true }));
+        showCombatText('🧿 ATTEMPTS RESET! ZERO PENALTY', 'player-hit');
+      } else if (slug === 'healing_potion') {
+        setPlayerHP(100);
+        showCombatText('❤️ HP RESTORED TO 100%!', 'player-hit');
+      } else if (slug === 'retry_shield') {
+        setActiveItems(prev => ({ ...prev, retry_shield: true }));
+        showCombatText('🛡️ RETRY SHIELD ACTIVE (BLOCKS NEXT HIT)!', 'player-hit');
+      } else if (slug === 'lightning_flask') {
+        setActiveItems(prev => ({ ...prev, lightning_flask: true }));
+        showCombatText('🧪 2X COIN REWARD ON SOLVE!', 'player-hit');
+      } else if (slug === 'shadow_veil') {
+        setActiveItems(prev => ({ ...prev, shadow_veil: true }));
+        showCombatText('🥷 SHADOW VEIL ACTIVE (-50% DMG / STEALTH)!', 'player-hit');
+      } else if (slug === 'xp_tome') {
+        activateBuff('xp_tome', 3600000);
+        setActiveItems(prev => ({ ...prev, xp_tome: true }));
+        showCombatText('📘 +50% XP BOOST ACTIVE (1 HOUR)!', 'player-hit');
+      } else {
+        setActiveItems(prev => ({ ...prev, [slug]: true }));
+        showCombatText(`${itemName.toUpperCase()} ACTIVATED!`, 'player-hit');
+      }
+
+      setShowInventory(false);
+
+    } catch (err) {
+      console.error('Error using item:', err);
+      showCombatText('USAGE ERROR - ITEM PRESERVED', 'enemy-hit');
+    } finally {
+      setUsingItemId(null);
+    }
   };
 
   // Screen shake effect
@@ -990,61 +1044,6 @@ export default function Question() {
               </div>
             )}
 
-            {/* Inventory Drawer */}
-            <AnimatePresence>
-              {showInventory && (
-                <motion.div 
-                  className="inventory-drawer"
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                >
-                  <div className="inventory-header">
-                    <div className="flex items-center gap-2 font-black text-sm uppercase">
-                      <Backpack size={16} />
-                      <span>Magic Bag ({inventory.reduce((acc, i) => acc + i.quantity, 0)} Items)</span>
-                    </div>
-                    <button className="inventory-close-btn" onClick={() => setShowInventory(false)}>✕ CLOSE</button>
-                  </div>
-                  {inventory.length === 0 ? (
-                    <div className="inventory-empty-wrap">
-                      <div className="inv-empty-icon">🎒</div>
-                      <div className="inv-empty-msg">Your bag is empty. Visit the Shop to buy items!</div>
-                      <button className="neo-btn btn-sm inv-shop-btn" onClick={() => navigate('/shop')}>
-                        VISIT SHOP
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="inventory-grid">
-                      {inventory.map((invItem) => (
-                        <div key={invItem.id} className="inv-item-card neo-border">
-                          <div className="inv-item-icon-col" style={{ borderColor: RARITY_COLORS[invItem.items?.rarity] || '#000' }}>
-                            <span className="inv-item-emoji">{invItem.items?.icon || '📦'}</span>
-                            <span className="inv-item-qty-tag">x{invItem.quantity}</span>
-                          </div>
-                          <div className="inv-item-body">
-                            <div className="inv-item-title-row">
-                              <span className="inv-item-title">{invItem.items?.name}</span>
-                              <span className="inv-item-badge" style={{ color: RARITY_COLORS[invItem.items?.rarity] || '#000' }}>
-                                {invItem.items?.rarity}
-                              </span>
-                            </div>
-                            <div className="inv-item-desc-text">{invItem.items?.description}</div>
-                          </div>
-                          <button 
-                            className="inv-item-use-btn neo-btn neo-btn-primary" 
-                            onClick={() => handleUseItem(invItem)}
-                          >
-                            USE
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-
             {/* Code Editor */}
             <div className="editor-body">
               <CodeMirror
@@ -1087,6 +1086,117 @@ export default function Question() {
             addCustomCase={addCustomCase}
             panelRef={panelRef}
           />
+
+          {/* MAGIC BAG SLIDE-OVER OVERLAY (Non-intrusive over right workspace) */}
+          <AnimatePresence>
+            {showInventory && (
+              <>
+                <motion.div
+                  className="magic-bag-backdrop"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setShowInventory(false)}
+                />
+                <motion.aside
+                  className="magic-bag-slideover"
+                  initial={{ x: '100%' }}
+                  animate={{ x: 0 }}
+                  exit={{ x: '100%' }}
+                  transition={{ type: 'spring', damping: 25, stiffness: 240 }}
+                  role="dialog"
+                  aria-label="Magic Bag Inventory"
+                >
+                  <div className="magic-bag-header">
+                    <div className="magic-bag-title-col">
+                      <div className="magic-bag-title">
+                        <Backpack size={18} />
+                        <span>MAGIC BAG ({inventory.reduce((acc, i) => acc + i.quantity, 0)} ITEMS)</span>
+                      </div>
+                      <span className="magic-bag-subtitle">Tactical items & consumables</span>
+                    </div>
+                    <button 
+                      className="magic-bag-close-btn" 
+                      onClick={() => setShowInventory(false)}
+                      title="Close Bag (Esc)"
+                    >
+                      ✕ CLOSE
+                    </button>
+                  </div>
+
+                  {inventory.length === 0 ? (
+                    <div className="magic-bag-empty-wrap">
+                      <div className="magic-bag-empty-icon">🎒</div>
+                      <div className="magic-bag-empty-title">Your Bag is Empty!</div>
+                      <p className="magic-bag-empty-desc">
+                        Visit the Shop to acquire Hint Scrolls, Retry Shields, Focus Charms, and Lightning Flasks.
+                      </p>
+                      <button className="neo-btn inv-shop-btn" onClick={() => navigate('/shop')}>
+                        VISIT SHOP
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="magic-bag-list">
+                      {inventory.map((invItem) => {
+                        const slug = invItem.items?.slug || invItem.item_id || invItem.id;
+                        const isUsing = usingItemId === (invItem.id || slug);
+                        const isPassive = invItem.items?.type === 'passive' || invItem.items?.type === 'PASSIVE';
+                        const isActiveBuff = (
+                          (slug === 'retry_shield' && activeItems.retry_shield) ||
+                          (slug === 'lightning_flask' && activeItems.lightning_flask) ||
+                          (slug === 'focus_charm' && activeItems.focus_charm) ||
+                          (slug === 'shadow_veil' && activeItems.shadow_veil) ||
+                          (slug === 'xp_tome' && (activeItems.xp_tome || isBuffActive('xp_tome')))
+                        );
+                        const rarityKey = (invItem.items?.rarity || 'common').toLowerCase();
+                        const rarityColor = RARITY_COLORS[rarityKey] || '#9CA3AF';
+
+                        return (
+                          <div key={invItem.id || slug} className="magic-bag-card">
+                            <div className="magic-bag-card-icon-col" style={{ borderColor: rarityColor }}>
+                              <span className="magic-bag-emoji">{invItem.items?.icon || invItem.items?.icon_url || '📦'}</span>
+                              <span className="magic-bag-qty-tag">x{invItem.quantity}</span>
+                            </div>
+                            <div className="magic-bag-card-body">
+                              <div className="magic-bag-card-top">
+                                <span className="magic-bag-card-title">{invItem.items?.name || slug}</span>
+                                <span 
+                                  className="magic-bag-rarity-pill" 
+                                  style={{ borderColor: rarityColor, color: rarityColor }}
+                                >
+                                  {rarityKey.toUpperCase()}
+                                </span>
+                              </div>
+                              <p className="magic-bag-card-desc">{invItem.items?.description}</p>
+                            </div>
+                            <div className="magic-bag-card-action">
+                              {isPassive ? (
+                                <button className="magic-bag-btn-state passive" disabled title="Passive gear effect is permanently active">
+                                  PASSIVE
+                                </button>
+                              ) : isActiveBuff ? (
+                                <button className="magic-bag-btn-state active" disabled title="Already active for this battle">
+                                  ACTIVE
+                                </button>
+                              ) : (
+                                <button
+                                  className="magic-bag-use-btn neo-btn"
+                                  onClick={() => handleUseItem(invItem)}
+                                  disabled={isUsing || invItem.quantity <= 0}
+                                >
+                                  {isUsing ? 'USING...' : 'USE'}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </motion.aside>
+              </>
+            )}
+          </AnimatePresence>
         </div>
       </div>
       {/* CODO GUIDE — SMART CODING COMPANION */}

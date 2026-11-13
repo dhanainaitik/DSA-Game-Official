@@ -78,8 +78,34 @@ export function ProgressProvider({ children }) {
             bronzeMedals: stats.bronzeMedals ?? prev.bronzeMedals ?? 0,
           }));
         }
+
+        // 2. Fetch live server inventory from Supabase via backend API
+        const invRes = await fetch(apiUrl('/api/inventory'), {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (invRes.ok) {
+          const invData = await invRes.json();
+          if (Array.isArray(invData)) {
+            const serverInv = {};
+            invData.forEach(row => {
+              const slug = row.items?.slug || row.item_id;
+              if (slug && Number(row.quantity) > 0) {
+                serverInv[slug] = Number(row.quantity);
+              }
+            });
+            if (Object.keys(serverInv).length > 0) {
+              setProgress(prev => ({
+                ...prev,
+                inventory: {
+                  ...(prev.inventory || {}),
+                  ...serverInv,
+                },
+              }));
+            }
+          }
+        }
       } catch (err) {
-        console.warn('Battle stats sync error:', err);
+        console.warn('Live stats/inventory sync error:', err);
       }
     };
     fetchLiveStats();
@@ -391,10 +417,27 @@ export function ProgressProvider({ children }) {
     return { success: true, item, newQuantity: updatedQty };
   };
 
-  const useItem = (itemId) => {
+  const updateInventoryQty = (itemId, newQty) => {
+    if (!itemId) return;
+    const qtyNum = Math.max(0, Number(newQty) || 0);
+    setProgress(prev => {
+      const nextInv = { ...(prev.inventory || {}) };
+      if (qtyNum <= 0) {
+        delete nextInv[itemId];
+      } else {
+        nextInv[itemId] = qtyNum;
+      }
+      return {
+        ...prev,
+        inventory: nextInv,
+      };
+    });
+  };
+
+  const useItem = (itemId, exactRemaining = null) => {
     if (!itemId) return { success: false, reason: 'invalid_id' };
     const currentQty = progress.inventory?.[itemId] || 0;
-    if (currentQty <= 0) {
+    if (exactRemaining === null && currentQty <= 0) {
       return { success: false, reason: 'not_in_inventory' };
     }
 
@@ -403,15 +446,15 @@ export function ProgressProvider({ children }) {
 
     setProgress(prev => {
       const prevQty = prev.inventory?.[itemId] || 0;
-      if (prevQty <= 0) return prev;
+      const targetQty = (exactRemaining !== null) ? Math.max(0, Number(exactRemaining)) : Math.max(0, prevQty - 1);
 
       const nextInv = { ...(prev.inventory || {}) };
-      if (prevQty - 1 <= 0) {
+      if (targetQty <= 0) {
         delete nextInv[itemId];
         remaining = 0;
       } else {
-        nextInv[itemId] = prevQty - 1;
-        remaining = prevQty - 1;
+        nextInv[itemId] = targetQty;
+        remaining = targetQty;
       }
 
       return {
@@ -523,6 +566,7 @@ export function ProgressProvider({ children }) {
       addMedals,
       buyItem,
       useItem,
+      updateInventoryQty,
       getInventoryList,
       activateBuff,
       clearBuff,
