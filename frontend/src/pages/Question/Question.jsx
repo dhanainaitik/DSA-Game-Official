@@ -414,10 +414,8 @@ export default function Question() {
         showCombatText('RUN FAILED', 'enemy-hit');
       }
 
-      // Smooth scroll to testcase panel
-      setTimeout(() => {
-        panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }, 100);
+      // Ensure testcase panel is open and visible without scrolling the outer page
+      setPanelOpen(true);
 
       const diag = diagnoseSubmissionForCodoGuide({
         code,
@@ -567,10 +565,6 @@ export default function Question() {
       });
       setAiFeedback(result);
       setPanelOpen(true);
-
-      setTimeout(() => {
-        panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }, 100);
 
       // CODO GUIDE: Diagnose syntax/runtime/compiler errors locally without revealing DSA solutions
       const diag = diagnoseSubmissionForCodoGuide({
