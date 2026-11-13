@@ -42,6 +42,10 @@ const PROBLEM_TYPES = {
   'p-ll-1-5': { type: 'TWO_LINKED_LISTS_TO_LINKED_LIST' },
 };
 
+function hasMainFunction(code) {
+  return /\bint\s+main\s*\(/.test(code) || /\bvoid\s+main\s*\(/.test(code);
+}
+
 /**
  * Builds C++ complete source with harness.
  */
@@ -73,6 +77,11 @@ using namespace std;
   // Safely normalize user code: if user code includes <bits/stdc++.h>, substitute with comment
   // because all standard STL headers are explicitly included above, guaranteeing cross-platform compilation
   const normalizedUserCode = userCode.replace(/#\s*include\s*<bits\/stdc\+\+\.h>/g, '// [Codo Champ Engine] Standard STL headers included');
+
+  // If user code contains a main function, treat as a complete standalone program (diagnostic or custom)
+  if (hasMainFunction(userCode)) {
+    return `${header}\n${normalizedUserCode}\n`;
+  }
 
   // Provide ListNode definition if problem needs it and user code doesn't define it
   const isLLProblem = spec.type.startsWith('LINKED_LIST') || spec.type.startsWith('TWO_LINKED_LISTS');
@@ -319,6 +328,11 @@ function buildCSource(userCode, testCases, problemId) {
 #include <limits.h>
 #include <math.h>
 `;
+
+  // If user code contains a main function, treat as a complete standalone program
+  if (hasMainFunction(userCode)) {
+    return `${header}\n${userCode}\n`;
+  }
 
   const isLLProblem = spec.type.startsWith('LINKED_LIST') || spec.type.startsWith('TWO_LINKED_LISTS');
   if (isLLProblem && !userCode.includes('struct ListNode')) {

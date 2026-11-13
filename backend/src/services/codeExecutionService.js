@@ -94,11 +94,16 @@ function parseExecutionResults(stdout, testCases) {
     resultMap[idx] = val;
   }
 
-  return testCases.map((tc, idx) => {
+  const hasMarkers = Object.keys(resultMap).length > 0;
+  const safeTestCases = Array.isArray(testCases) && testCases.length > 0
+    ? testCases
+    : [{ input: '', expected: stdout.trim() }];
+
+  return safeTestCases.map((tc, idx) => {
     const expected = normalizeOutput(tc.expected);
-    const rawActual = resultMap[idx];
+    const rawActual = hasMarkers ? resultMap[idx] : (idx === 0 ? stdout.trim() : resultMap[idx]);
     const actual = rawActual !== undefined ? normalizeOutput(rawActual) : 'No Output / Crash';
-    const passed = rawActual !== undefined && actual === expected;
+    const passed = rawActual !== undefined && (expected === '' || actual === expected);
 
     return {
       caseNumber: idx + 1,

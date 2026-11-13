@@ -31,7 +31,14 @@ function isOriginAllowed(origin, allowedOrigins) {
   if (!origin) return true;
   const normalized = normalizeOrigin(origin);
   if (!normalized || normalized === '*') return false;
-  return allowedOrigins.includes(normalized);
+  if (allowedOrigins.includes(normalized)) return true;
+
+  // Allow all Vercel domains for Codo Champ (production, preview, and branch deploys)
+  if (/^https:\/\/([a-zA-Z0-9-]+\.)*vercel\.app$/i.test(normalized)) {
+    return true;
+  }
+
+  return false;
 }
 
 function createCorsOriginValidator(allowedOrigins) {

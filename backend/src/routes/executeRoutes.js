@@ -21,6 +21,46 @@ function getProblemTestCases(problemId) {
   return PROBLEMS_CACHE[problemId]?.testCases || null;
 }
 
+// Compiler health and diagnostic check endpoint
+router.get('/health', async (req, res) => {
+  try {
+    const cppCheck = await executeCode({
+      language: 'cpp',
+      code: '#include <iostream>\nusing namespace std;\nint main() { cout << 42; return 0; }',
+      testCases: [{ input: '', expected: '42' }],
+    });
+
+    const cCheck = await executeCode({
+      language: 'c',
+      code: '#include <stdio.h>\nint main() { printf("42"); return 0; }',
+      testCases: [{ input: '', expected: '42' }],
+    });
+
+    const healthy = cppCheck.passed && cCheck.passed;
+    return res.status(healthy ? 200 : 503).json({
+      status: healthy ? 'healthy' : 'degraded',
+      compiler: 'native-gcc',
+      cpp: {
+        healthy: cppCheck.passed,
+        output: cppCheck.results?.[0]?.actual,
+        error: cppCheck.compileError || cppCheck.runtimeError,
+      },
+      c: {
+        healthy: cCheck.passed,
+        output: cCheck.results?.[0]?.actual,
+        error: cCheck.compileError || cCheck.runtimeError,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    return res.status(500).json({
+      status: 'error',
+      compiler: 'native-gcc',
+      error: err.message,
+    });
+  }
+});
+
 router.post('/', async (req, res) => {
   const { language, code, problemId, testCases, mode } = req.body;
 
@@ -52,6 +92,12 @@ router.post('/', async (req, res) => {
   let resolvedTestCases = Array.isArray(testCases) && testCases.length > 0 ? testCases : null;
   if (!resolvedTestCases && problemId) {
     resolvedTestCases = getProblemTestCases(problemId);
+  }
+
+  // If code contains main() (standalone program or diagnostic), allow execution without problemId
+  const isStandalone = /\bint\s+main\s*\(/.test(code) || /\bvoid\s+main\s*\(/.test(code);
+  if (!resolvedTestCases && isStandalone) {
+    resolvedTestCases = [{ input: '', expected: '' }];
   }
 
   if (!resolvedTestCases || resolvedTestCases.length === 0) {

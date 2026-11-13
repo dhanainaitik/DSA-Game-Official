@@ -82,6 +82,8 @@ test('isOriginAllowed and createCorsOriginValidator enforce configured origins a
   const validate = createCorsOriginValidator(allowed);
 
   assert.equal(isOriginAllowed('https://codo-prod.vercel.app', allowed), true);
+  assert.equal(isOriginAllowed('https://codo-champ.vercel.app', allowed), true);
+  assert.equal(isOriginAllowed('https://codo-preview-123.vercel.app', allowed), true);
   assert.equal(isOriginAllowed('http://localhost:5173', allowed), true);
   assert.equal(isOriginAllowed('https://evil.example.com', allowed), false);
   assert.equal(isOriginAllowed('*', allowed), false);

@@ -240,7 +240,51 @@ describe('Multi-Language Code Execution Engine', () => {
     assert.equal(res.results.every(r => !r.passed), true);
   });
 
-  // ── 4. Validation & Error Handling ──
+  // ── 4. Standalone Program Diagnostics (Printing 42) ──
+  test('Standalone C++ program printing 42 executes cleanly and returns 42', async () => {
+    const code = `
+      #include <iostream>
+      using namespace std;
+
+      int main() {
+        cout << 42;
+        return 0;
+      }
+    `;
+    const res = await executeCode({
+      language: 'cpp',
+      code,
+      testCases: [{ input: '', expected: '42' }],
+    });
+
+    assert.equal(res.compileError, null);
+    assert.equal(res.passed, true);
+    assert.equal(res.results[0].actual, '42');
+    assert.equal(res.results[0].passed, true);
+  });
+
+  test('Standalone C program printing 42 executes cleanly and returns 42', async () => {
+    const code = `
+      #include <stdio.h>
+
+      int main() {
+        printf("42");
+        return 0;
+      }
+    `;
+    const res = await executeCode({
+      language: 'c',
+      code,
+      testCases: [{ input: '', expected: '42' }],
+    });
+
+    assert.equal(res.compileError, null);
+    assert.equal(res.passed, true);
+    assert.equal(res.results[0].actual, '42');
+    assert.equal(res.results[0].passed, true);
+  });
+
+  // ── 5. Validation & Error Handling ──
   test('Unsupported language is rejected with error', async () => {
     await assert.rejects(
       async () => {
