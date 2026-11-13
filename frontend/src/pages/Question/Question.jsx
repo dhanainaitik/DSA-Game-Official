@@ -23,6 +23,7 @@ import { triggerGoblinDefeatEffects, preloadGoblinAudio } from '../../utils/gobl
 import { diagnoseSubmissionForCodoGuide, runStaticDiagnostics } from '../../utils/codoGuideAnalyzer';
 import gsap from 'gsap';
 import AICompanion from '../../components/Battle/AICompanion';
+import TestCasesPanel from './TestCasesPanel';
 
 import charNormalImg from '../../../charcters/char/char.png';
 import charDamagedImg from '../../../charcters/char/damged char.png';
@@ -60,6 +61,12 @@ export default function Question() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [unlockedHint, setUnlockedHint] = useState(null);
 
+  const [customInput, setCustomInput] = useState('');
+  const [customExpected, setCustomExpected] = useState('');
+  const [showAddCase, setShowAddCase] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(true);
+  const panelRef = useRef(null);
+
   // Clear unlocked hint and reset language caches when switching questions & preload Goblin sound
   useEffect(() => {
     setCodesByLanguage({});
@@ -68,12 +75,11 @@ export default function Question() {
     setShowCompanion(false);
     setCompanionGuide(null);
     hasEncouragedTypingRef.current = false;
+    setRunResults(null);
+    setSubmitResult(null);
+    setAiFeedback(null);
+    setTestCases(problem?.testCases || []);
   }, [problemId]);
-
-  const [customInput, setCustomInput] = useState('');
-  const [customExpected, setCustomExpected] = useState('');
-  const [showAddCase, setShowAddCase] = useState(false);
-  const [panelOpen, setPanelOpen] = useState(true);
 
   // V3 Battle State
   const enemy = getEnemyForProblem(problem?.regionId, problem?.difficulty);
@@ -398,12 +404,19 @@ export default function Question() {
       setPanelOpen(true);
       
       const passedCount = results.filter(r => r.passed).length;
-      const allDryPassed = results.length > 0 && passedCount === results.length;
+      const allDryPassed = results.length > 0 && passedCount === results.length && !results.compileError && !results.runtimeError;
       if (allDryPassed) {
         showCombatText('DRY RUN — O.K.', 'player-hit');
+      } else if (results.compileError) {
+        showCombatText('COMPILE ERROR', 'enemy-hit');
       } else {
         showCombatText('RUN FAILED', 'enemy-hit');
       }
+
+      // Smooth scroll to testcase panel
+      setTimeout(() => {
+        panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 100);
 
       const diag = diagnoseSubmissionForCodoGuide({
         code,
@@ -510,20 +523,25 @@ export default function Question() {
         }
       }
 
-      // If compilation error occurred in C++ or C, set clear feedback and zero results
+      // If compilation error occurred in C++ or C, set clear feedback
       if (result.compileError) {
         result.passed = false;
-        result.results = [];
         result.feedback = 'Compilation Error';
         result.details = result.compileError;
       }
 
       setSubmitResult({ 
         results: result.results || [], 
-        allPassed: Boolean(result.passed) 
+        allPassed: Boolean(result.passed),
+        compileError: result.compileError || null,
+        runtimeError: result.runtimeError || null,
       });
       setAiFeedback(result);
       setPanelOpen(true);
+
+      setTimeout(() => {
+        panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 100);
 
       // CODO GUIDE: Diagnose syntax/runtime/compiler errors locally without revealing DSA solutions
       const diag = diagnoseSubmissionForCodoGuide({
@@ -1015,171 +1033,29 @@ export default function Question() {
             </div>
           </div>
 
-          {/* Test Case Panel */}
-          <div className={`testcase-panel ${panelOpen ? 'open' : 'closed'}`}>
-            <div className="testcase-panel-header" onClick={() => setPanelOpen(v => !v)}>
-              <span className="section-label">Test Cases</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                {runResults && (
-                  <span className="run-summary">
-                    {runResults.filter(r => r.passed).length} / {runResults.length} passed
-                  </span>
-                )}
-                {panelOpen ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
-              </div>
-            </div>
-
-            <AnimatePresence>
-              {panelOpen && (
-                <motion.div
-                  className="testcase-panel-body"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.15 }}
-                >
-                  {/* Submit result banner */}
-                  {submitResult && (
-                    <div className={`submit-banner ${allSubmitPassed ? 'pass' : 'fail'} animate-scaleIn`}>
-                      {allSubmitPassed ? (
-                        <>
-                          <CheckCircle2 size={18} />
-                          <div>
-                            <div className="submit-banner-title">Victory</div>
-                            <div className="submit-banner-sub">{aiFeedback?.feedback || `Enemy ${enemy.name} defeated.`}</div>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <XCircle size={18} />
-                          <div>
-                            <div className="submit-banner-title">Mission Failed</div>
-                            <div className="submit-banner-sub">{aiFeedback?.feedback || 'Check your logic and try again.'}</div>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
-
-                  {/* AI Feedback */}
-                  {aiFeedback && (
-                    <div className="ai-feedback-box animate-fadeIn">
-                      <div className="ai-feedback-header">
-                        <Shield size={16} />
-                        <span>System Analysis</span>
-                        <div className="complexity-badges">
-                          <span className="badge-outline">Time: {aiFeedback.complexity?.time}</span>
-                          <span className="badge-outline">Space: {aiFeedback.complexity?.space}</span>
-                        </div>
-                      </div>
-                      <p className="ai-details">{aiFeedback.details}</p>
-                      {aiFeedback.suggestions?.length > 0 && (
-                        <div className="ai-suggestions">
-                          <span className="suggestion-label">Suggestions</span>
-                          <ul>
-                            {aiFeedback.suggestions.map((s, i) => <li key={i}>{s}</li>)}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Player Defeated */}
-                  {playerHP <= 0 && (
-                    <div className="submit-banner fail animate-scaleIn" style={{ borderColor: 'var(--hard)' }}>
-                      <AlertCircle size={18} color="var(--hard)" />
-                      <div>
-                        <div className="submit-banner-title" style={{ color: 'var(--hard)' }}>Defeated</div>
-                        <div className="submit-banner-sub">
-                          HP reached zero.{' '}
-                          <a href="#" onClick={(e) => { e.preventDefault(); setPlayerHP(100); }}>Retry</a>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Individual Results */}
-                  {(runResults || submitResult?.results)?.map((result, i) => (
-                    <div key={i} className={`tc-result ${result.passed ? 'pass' : result.error ? 'error' : 'fail'}`}>
-                      <div className="tc-result-header">
-                        <div className="tc-result-index">
-                          {result.passed
-                            ? <CheckCircle2 size={14} color="var(--success)" />
-                            : result.error
-                            ? <AlertCircle size={14} color="var(--hard)" />
-                            : <XCircle size={14} color="var(--hard)" />
-                          }
-                          <span>Case {i + 1}</span>
-                          {result.duration && <span className="tc-duration">{result.duration}ms</span>}
-                        </div>
-                      </div>
-                      <div className="tc-result-body">
-                        <div className="tc-row">
-                          <span className="tc-label">Input</span>
-                          <code className="tc-value">{result.input}</code>
-                        </div>
-                        <div className="tc-row">
-                          <span className="tc-label">Expected</span>
-                          <code className="tc-value">{result.expected}</code>
-                        </div>
-                        <div className="tc-row">
-                          <span className="tc-label">Got</span>
-                          <code className={`tc-value ${result.passed ? 'correct' : 'wrong'}`}>
-                            {result.error || result.actual}
-                          </code>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-
-                  {/* Empty State */}
-                  {!runResults && !submitResult && (
-                    <div className="tc-empty">Run or submit code to see results.</div>
-                  )}
-
-                  {/* Test Cases List */}
-                  <div className="tc-list">
-                    <div className="tc-list-header">
-                      <span className="section-label">Test Cases ({testCases.length})</span>
-                      <button className="btn-brutalist" onClick={() => setShowAddCase(v => !v)}>
-                        <Plus size={13} /> ADD
-                      </button>
-                    </div>
-
-                    {testCases.map((tc, i) => (
-                      <div key={i} className="tc-item">
-                        <span className="tc-item-num">{i + 1}</span>
-                        <code className="tc-item-input">{tc.input}</code>
-                        <span className="tc-item-arrow">→</span>
-                        <code className="tc-item-expected">{tc.expected}</code>
-                      </div>
-                    ))}
-
-                    {showAddCase && (
-                      <div className="add-case-form animate-fadeIn">
-                        <input
-                          className="input"
-                          placeholder="Input (e.g. [1,2,3])"
-                          value={customInput}
-                          onChange={e => setCustomInput(e.target.value)}
-                        />
-                        <input
-                          className="input"
-                          placeholder="Expected output"
-                          value={customExpected}
-                          onChange={e => setCustomExpected(e.target.value)}
-                        />
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          <button className="btn-brutalist primary" onClick={addCustomCase}>ADD</button>
-                          <button className="btn-brutalist" onClick={() => setShowAddCase(false)}>CANCEL</button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+          {/* Complete Test Cases & Error Output Panel */}
+          <TestCasesPanel
+            testCases={testCases}
+            runResults={runResults}
+            submitResult={submitResult}
+            aiFeedback={aiFeedback}
+            enemy={enemy}
+            playerHP={playerHP}
+            setPlayerHP={setPlayerHP}
+            selectedLang={selectedLang}
+            isRunning={isRunning}
+            isSubmitting={isSubmitting}
+            panelOpen={panelOpen}
+            setPanelOpen={setPanelOpen}
+            showAddCase={showAddCase}
+            setShowAddCase={setShowAddCase}
+            customInput={customInput}
+            setCustomInput={setCustomInput}
+            customExpected={customExpected}
+            setCustomExpected={setCustomExpected}
+            addCustomCase={addCustomCase}
+            panelRef={panelRef}
+          />
         </div>
       </div>
       {/* CODO GUIDE — SMART CODING COMPANION */}

@@ -182,7 +182,8 @@ describe('Multi-Language Code Execution Engine', () => {
     assert.equal(res.passed, false);
     assert.ok(res.compileError, 'compileError should not be null');
     assert.ok(res.compileError.includes('error:'), 'compileError should contain g++ error message');
-    assert.equal(res.results.length, 0);
+    assert.equal(res.results.length, 3);
+    assert.equal(res.results.every(r => !r.passed), true);
   });
 
   test('Compilation error in C is captured and returned', async () => {
@@ -202,7 +203,8 @@ describe('Multi-Language Code Execution Engine', () => {
     assert.equal(res.passed, false);
     assert.ok(res.compileError, 'compileError should not be null');
     assert.ok(res.compileError.includes('error:'), 'compileError should contain gcc error message');
-    assert.equal(res.results.length, 0);
+    assert.equal(res.results.length, 3);
+    assert.equal(res.results.every(r => !r.passed), true);
   });
 
   // ── 4. Validation & Error Handling ──

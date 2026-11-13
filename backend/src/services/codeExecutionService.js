@@ -45,7 +45,7 @@ function runProcess(file, args, options = {}) {
             error,
             stdout: stdout ? stdout.toString() : '',
             stderr: stderr ? stderr.toString() : '',
-            timedOut: error.killed && error.signal === 'SIGTERM',
+            timedOut: error.killed && (error.signal === 'SIGTERM' || error.code === 'ETIMEDOUT'),
           });
         }
         resolve({
@@ -101,11 +101,17 @@ function parseExecutionResults(stdout, testCases) {
     const passed = rawActual !== undefined && actual === expected;
 
     return {
+      caseNumber: idx + 1,
       input: typeof tc.input === 'string' ? tc.input : JSON.stringify(tc.input),
       expected,
+      expectedOutput: expected,
       actual,
+      actualOutput: actual,
       passed,
+      status: passed ? 'passed' : 'failed',
       duration: '0.0',
+      executionTime: 0,
+      error: rawActual === undefined ? 'Process exited without returning a result' : null,
     };
   });
 }
@@ -162,10 +168,29 @@ async function executeCode({ language, code, problemId, testCases = [], mode = '
 
       if (!compileResult.success) {
         return {
+          success: false,
           passed: false,
+          language: normalizedLang,
+          passedCount: 0,
+          totalCount: testCases.length,
           compileError: compileResult.compileError,
-          results: [],
+          runtimeError: null,
+          error: compileResult.compileError,
+          results: testCases.map((tc, idx) => ({
+            caseNumber: idx + 1,
+            input: typeof tc.input === 'string' ? tc.input : JSON.stringify(tc.input),
+            expected: normalizeOutput(tc.expected),
+            expectedOutput: normalizeOutput(tc.expected),
+            actual: 'Compilation Error',
+            actualOutput: 'Compilation Error',
+            passed: false,
+            status: 'error',
+            error: compileResult.compileError,
+            executionTime: 0,
+            duration: '0.0',
+          })),
           feedback: 'Compilation Error: Please check your syntax and types.',
+          details: compileResult.compileError,
         };
       }
 
@@ -178,30 +203,54 @@ async function executeCode({ language, code, problemId, testCases = [], mode = '
 
       if (execRes.timedOut) {
         return {
+          success: false,
           passed: false,
-          runtimeError: 'Time Limit Exceeded (3000ms). Check for infinite loops.',
-          results: testCases.map(tc => ({
+          language: normalizedLang,
+          passedCount: 0,
+          totalCount: testCases.length,
+          compileError: null,
+          runtimeError: 'Time Limit Exceeded (3000ms). Check for infinite loops or inefficient recursion.',
+          error: 'Time Limit Exceeded (3000ms)',
+          results: testCases.map((tc, idx) => ({
+            caseNumber: idx + 1,
             input: typeof tc.input === 'string' ? tc.input : JSON.stringify(tc.input),
             expected: normalizeOutput(tc.expected),
+            expectedOutput: normalizeOutput(tc.expected),
             actual: 'Time Limit Exceeded',
+            actualOutput: 'Time Limit Exceeded',
             passed: false,
+            status: 'timeout',
+            error: 'Time Limit Exceeded (3000ms)',
+            executionTime: 3000,
+            duration: '3000.0',
           })),
+          feedback: 'Time Limit Exceeded (3000ms). Check for infinite loops.',
+          details: 'The execution took longer than 3000ms and was terminated.',
         };
       }
 
       const results = parseExecutionResults(execRes.stdout, testCases);
-      const allPassed = results.length > 0 && results.every(r => r.passed);
+      const passedCount = results.filter(r => r.passed).length;
+      const allPassed = results.length > 0 && passedCount === results.length;
       const totalDuration = ((Date.now() - startTime) / 1000).toFixed(2);
 
       return {
+        success: allPassed,
         passed: allPassed,
+        language: normalizedLang,
+        passedCount,
+        totalCount: results.length,
         results,
         compileError: null,
         runtimeError: execRes.error ? (execRes.stderr || execRes.error.message) : null,
+        error: execRes.error ? (execRes.stderr || execRes.error.message) : null,
         duration: totalDuration,
         feedback: allPassed
           ? 'All test cases verified successfully in C++.'
-          : `${results.filter(r => r.passed).length} of ${results.length} test cases passed.`,
+          : `${passedCount} of ${results.length} test cases passed.`,
+        details: allPassed
+          ? 'Verified 100% pass rate across all test cases.'
+          : `${passedCount} of ${results.length} test cases passed.`,
       };
     } else if (normalizedLang === 'c') {
       const srcFile = path.join(tmpDir, 'solution.c');
@@ -220,10 +269,29 @@ async function executeCode({ language, code, problemId, testCases = [], mode = '
 
       if (!compileResult.success) {
         return {
+          success: false,
           passed: false,
+          language: normalizedLang,
+          passedCount: 0,
+          totalCount: testCases.length,
           compileError: compileResult.compileError,
-          results: [],
+          runtimeError: null,
+          error: compileResult.compileError,
+          results: testCases.map((tc, idx) => ({
+            caseNumber: idx + 1,
+            input: typeof tc.input === 'string' ? tc.input : JSON.stringify(tc.input),
+            expected: normalizeOutput(tc.expected),
+            expectedOutput: normalizeOutput(tc.expected),
+            actual: 'Compilation Error',
+            actualOutput: 'Compilation Error',
+            passed: false,
+            status: 'error',
+            error: compileResult.compileError,
+            executionTime: 0,
+            duration: '0.0',
+          })),
           feedback: 'Compilation Error: Please check your syntax and types in C.',
+          details: compileResult.compileError,
         };
       }
 
@@ -236,30 +304,54 @@ async function executeCode({ language, code, problemId, testCases = [], mode = '
 
       if (execRes.timedOut) {
         return {
+          success: false,
           passed: false,
-          runtimeError: 'Time Limit Exceeded (3000ms). Check for infinite loops.',
-          results: testCases.map(tc => ({
+          language: normalizedLang,
+          passedCount: 0,
+          totalCount: testCases.length,
+          compileError: null,
+          runtimeError: 'Time Limit Exceeded (3000ms). Check for infinite loops or inefficient recursion.',
+          error: 'Time Limit Exceeded (3000ms)',
+          results: testCases.map((tc, idx) => ({
+            caseNumber: idx + 1,
             input: typeof tc.input === 'string' ? tc.input : JSON.stringify(tc.input),
             expected: normalizeOutput(tc.expected),
+            expectedOutput: normalizeOutput(tc.expected),
             actual: 'Time Limit Exceeded',
+            actualOutput: 'Time Limit Exceeded',
             passed: false,
+            status: 'timeout',
+            error: 'Time Limit Exceeded (3000ms)',
+            executionTime: 3000,
+            duration: '3000.0',
           })),
+          feedback: 'Time Limit Exceeded (3000ms). Check for infinite loops.',
+          details: 'The execution took longer than 3000ms and was terminated.',
         };
       }
 
       const results = parseExecutionResults(execRes.stdout, testCases);
-      const allPassed = results.length > 0 && results.every(r => r.passed);
+      const passedCount = results.filter(r => r.passed).length;
+      const allPassed = results.length > 0 && passedCount === results.length;
       const totalDuration = ((Date.now() - startTime) / 1000).toFixed(2);
 
       return {
+        success: allPassed,
         passed: allPassed,
+        language: normalizedLang,
+        passedCount,
+        totalCount: results.length,
         results,
         compileError: null,
         runtimeError: execRes.error ? (execRes.stderr || execRes.error.message) : null,
+        error: execRes.error ? (execRes.stderr || execRes.error.message) : null,
         duration: totalDuration,
         feedback: allPassed
           ? 'All test cases verified successfully in C.'
-          : `${results.filter(r => r.passed).length} of ${results.length} test cases passed.`,
+          : `${passedCount} of ${results.length} test cases passed.`,
+        details: allPassed
+          ? 'Verified 100% pass rate across all test cases.'
+          : `${passedCount} of ${results.length} test cases passed.`,
       };
     } else if (normalizedLang === 'javascript') {
       const runnerFile = path.join(tmpDir, 'runner.js');
@@ -274,39 +366,83 @@ async function executeCode({ language, code, problemId, testCases = [], mode = '
 
       if (execRes.timedOut) {
         return {
+          success: false,
           passed: false,
-          runtimeError: 'Time Limit Exceeded (3000ms). Check for infinite loops.',
-          results: testCases.map(tc => ({
+          language: normalizedLang,
+          passedCount: 0,
+          totalCount: testCases.length,
+          compileError: null,
+          runtimeError: 'Time Limit Exceeded (3000ms). Check for infinite loops or inefficient recursion.',
+          error: 'Time Limit Exceeded (3000ms)',
+          results: testCases.map((tc, idx) => ({
+            caseNumber: idx + 1,
             input: typeof tc.input === 'string' ? tc.input : JSON.stringify(tc.input),
             expected: normalizeOutput(tc.expected),
+            expectedOutput: normalizeOutput(tc.expected),
             actual: 'Time Limit Exceeded',
+            actualOutput: 'Time Limit Exceeded',
             passed: false,
+            status: 'timeout',
+            error: 'Time Limit Exceeded (3000ms)',
+            executionTime: 3000,
+            duration: '3000.0',
           })),
+          feedback: 'Time Limit Exceeded (3000ms). Check for infinite loops.',
+          details: 'The execution took longer than 3000ms and was terminated.',
         };
       }
 
       if (execRes.error && !execRes.stdout.includes('__RESULT_START__')) {
+        const runtimeErr = execRes.stderr || execRes.error.message;
         return {
+          success: false,
           passed: false,
-          runtimeError: execRes.stderr || execRes.error.message,
-          results: [],
-          feedback: 'JavaScript Execution Error: ' + (execRes.stderr || execRes.error.message),
+          language: normalizedLang,
+          passedCount: 0,
+          totalCount: testCases.length,
+          compileError: null,
+          runtimeError: runtimeErr,
+          error: runtimeErr,
+          results: testCases.map((tc, idx) => ({
+            caseNumber: idx + 1,
+            input: typeof tc.input === 'string' ? tc.input : JSON.stringify(tc.input),
+            expected: normalizeOutput(tc.expected),
+            expectedOutput: normalizeOutput(tc.expected),
+            actual: 'Runtime Error',
+            actualOutput: 'Runtime Error',
+            passed: false,
+            status: 'error',
+            error: runtimeErr,
+            executionTime: 0,
+            duration: '0.0',
+          })),
+          feedback: 'JavaScript Execution Error: ' + runtimeErr,
+          details: runtimeErr,
         };
       }
 
       const results = parseExecutionResults(execRes.stdout, testCases);
-      const allPassed = results.length > 0 && results.every(r => r.passed);
+      const passedCount = results.filter(r => r.passed).length;
+      const allPassed = results.length > 0 && passedCount === results.length;
       const totalDuration = ((Date.now() - startTime) / 1000).toFixed(2);
 
       return {
+        success: allPassed,
         passed: allPassed,
+        language: normalizedLang,
+        passedCount,
+        totalCount: results.length,
         results,
         compileError: null,
         runtimeError: execRes.error ? (execRes.stderr || execRes.error.message) : null,
+        error: execRes.error ? (execRes.stderr || execRes.error.message) : null,
         duration: totalDuration,
         feedback: allPassed
           ? 'All test cases verified successfully in JavaScript.'
-          : `${results.filter(r => r.passed).length} of ${results.length} test cases passed.`,
+          : `${passedCount} of ${results.length} test cases passed.`,
+        details: allPassed
+          ? 'Verified 100% pass rate across all test cases.'
+          : `${passedCount} of ${results.length} test cases passed.`,
       };
     }
   } finally {
@@ -323,4 +459,3 @@ module.exports = {
   executeCode,
   SUPPORTED_LANGUAGES,
 };
-
